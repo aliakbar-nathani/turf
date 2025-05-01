@@ -22,7 +22,7 @@
                             </div>
                             <div class="col-md-6">
                                 <strong>Original Price:</strong> ₹<span id="original-price" data-price="{{ booking.original_price }}">{{ booking.original_price }}</span><br>
-                                <strong>Current Offer:</strong> ₹{{ booking.total_price }}<br>
+                                <strong>Current Offer:</strong> ₹<span id="current-offer">{{ booking.total_price }}</span><br>
                                 <strong>Status:</strong> <span class="badge bg-warning text-dark">{{ booking.status }}</span>
                             </div>
                         </div>
