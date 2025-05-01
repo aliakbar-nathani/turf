@@ -5,6 +5,9 @@ from datetime import datetime, time, timedelta
 from app import db
 from models import Turf, TimeSlot, Booking, BookingStatus, Negotiation, Dispute
 from forms import BookingForm, NegotiationForm, DisputeForm
+from flask_wtf import FlaskForm
+from wtforms import SelectField, SubmitField
+from wtforms.validators import DataRequired
 
 booking = Blueprint('booking', __name__)
 
@@ -405,4 +408,57 @@ def create_dispute(booking_id):
         turf=turf,
         form=form,
         title='Submit Dispute'
+    )
+
+@booking.route('/bookings/<int:booking_id>/select-payment', methods=['GET', 'POST'])
+@login_required
+def select_payment(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    
+    # Check if the booking belongs to the current user
+    if booking.user_id != current_user.id:
+        abort(403)
+    
+    # Check if booking requires payment selection
+    if booking.payment_method != 'pending_negotiation':
+        flash('Payment method already selected.', 'warning')
+        return redirect(url_for('user.bookings'))
+    
+    # Create a simple form for payment method selection
+    class PaymentSelectionForm(FlaskForm):
+        payment_option = SelectField('Payment Option', choices=[
+            ('pay_online', 'Pay Online Now'),
+            ('pay_on_arrival', 'Pay On Arrival')
+        ], default='pay_online', validators=[DataRequired()])
+        submit = SubmitField('Continue')
+    
+    form = PaymentSelectionForm()
+    
+    if form.validate_on_submit():
+        # Update booking with selected payment method
+        booking.payment_method = form.payment_option.data
+        
+        # Update booking status based on payment method
+        if booking.payment_method == 'pay_on_arrival':
+            booking.status = BookingStatus.CONFIRMED
+            flash('Your booking has been confirmed! Please pay on arrival at the turf.', 'success')
+        else:
+            booking.status = BookingStatus.PAYMENT_PENDING
+        
+        db.session.commit()
+        
+        # Redirect based on payment method
+        if booking.payment_method == 'pay_on_arrival':
+            return redirect(url_for('user.bookings'))
+        else:
+            return redirect(url_for('payment.checkout', booking_id=booking.id))
+    
+    turf = Turf.query.get(booking.turf_id)
+    
+    return render_template(
+        'payment/select_payment.html',
+        booking=booking,
+        turf=turf,
+        form=form,
+        title='Select Payment Method'
     )
