@@ -354,7 +354,7 @@ def cancel_booking(booking_id):
         abort(403)
     
     # Check if booking is cancellable
-    if booking.status not in [BookingStatus.CONFIRMED]:
+    if booking.status not in [BookingStatus.CONFIRMED, BookingStatus.PAYMENT_PENDING]:
         flash('This booking cannot be cancelled.', 'warning')
         return redirect(url_for('user.bookings'))
     
