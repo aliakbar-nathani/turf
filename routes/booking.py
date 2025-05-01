@@ -23,6 +23,13 @@ def view_turf(turf_id):
     # Get features as list
     features = turf.features.split(',') if turf.features else []
     
+    # Check if turf is in user's favorites
+    is_favorited = False
+    if current_user.is_authenticated:
+        from models import Favorite
+        favorite = Favorite.query.filter_by(user_id=current_user.id, turf_id=turf_id).first()
+        is_favorited = favorite is not None
+    
     return render_template(
         'turf/details.html',
         turf=turf,
@@ -31,6 +38,7 @@ def view_turf(turf_id):
         available_slots=available_slots,
         features=features,
         today=today,
+        is_favorited=is_favorited,
         title=turf.name
     )
 

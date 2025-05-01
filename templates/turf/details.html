@@ -97,8 +97,15 @@
                         </div>
                     {% endif %}
                     
-                    <div class="d-grid">
-                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary btn-lg">Book Now</a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary btn-lg flex-grow-1">Book Now</a>
+                        {% if current_user.is_authenticated %}
+                            <form action="{{ url_for('favorites.toggle_favorite', turf_id=turf.id) }}" method="POST" id="favorite-form">
+                                <button type="submit" class="btn {% if is_favorited %}btn-danger{% else %}btn-outline-danger{% endif %} btn-lg" id="favorite-btn" title="{% if is_favorited %}Remove from favorites{% else %}Add to favorites{% endif %}">
+                                    <i class="fas {% if is_favorited %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -232,6 +239,66 @@
                 });
             });
         }
+    });
+    
+    // Handle favorites form submission via AJAX
+    document.getElementById('favorite-form')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        const btn = document.getElementById('favorite-btn');
+        
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_favorite) {
+                btn.classList.remove('btn-outline-danger');
+                btn.classList.add('btn-danger');
+                btn.querySelector('i').classList.remove('fa-heart-o');
+                btn.querySelector('i').classList.add('fa-heart');
+                btn.title = 'Remove from favorites';
+            } else {
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-outline-danger');
+                btn.querySelector('i').classList.remove('fa-heart');
+                btn.querySelector('i').classList.add('fa-heart-o');
+                btn.title = 'Add to favorites';
+            }
+            
+            // Show toast message
+            const toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                const toast = document.createElement('div');
+                toast.className = 'toast align-items-center text-white bg-success border-0';
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${data.message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                toastContainer.appendChild(toast);
+                
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+                
+                // Remove toast after it's hidden
+                toast.addEventListener('hidden.bs.toast', function() {
+                    toastContainer.removeChild(toast);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
     });
 </script>
 {% endblock %}
