@@ -76,8 +76,15 @@ def book_turf(turf_id):
     
     if form.validate_on_submit():
         # Get the selected date and time slot
-        booking_date = datetime.strptime(form.booking_date.data, '%Y-%m-%d').date()
-        time_slot_id = form.time_slot.data
+        try:
+            booking_date = datetime.strptime(form.booking_date.data, '%Y-%m-%d').date() if form.booking_date.data else None
+            if not booking_date:
+                flash('Please select a valid booking date.', 'danger')
+                return redirect(url_for('booking.book_turf', turf_id=turf.id))
+            time_slot_id = form.time_slot.data
+        except ValueError:
+            flash('Invalid date format. Please select a date from the calendar.', 'danger')
+            return redirect(url_for('booking.book_turf', turf_id=turf.id))
         
         # Validate time slot
         time_slot = TimeSlot.query.get_or_404(time_slot_id)
@@ -205,7 +212,8 @@ def negotiate(booking_id):
             # Make a counter offer
             counter_price = form.proposed_price.data
             
-            if counter_price <= 0:
+            # Ensure we have a valid counter price (not None and greater than zero)
+            if counter_price is None or not isinstance(counter_price, (int, float)) or counter_price <= 0:
                 flash('Please enter a valid counter price.', 'danger')
                 return redirect(url_for('booking.negotiate', booking_id=booking.id))
             
