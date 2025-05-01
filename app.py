@@ -59,12 +59,12 @@ with app.app_context():
     from routes.home import home
     
     # Register blueprints
-    app.register_blueprint(auth)
-    app.register_blueprint(user)
-    app.register_blueprint(owner)
-    app.register_blueprint(admin)
-    app.register_blueprint(booking)
-    app.register_blueprint(payment)
+    app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(user, url_prefix='/user')
+    app.register_blueprint(owner, url_prefix='/owner')
+    app.register_blueprint(admin, url_prefix='/admin')
+    app.register_blueprint(booking, url_prefix='/bookings')
+    app.register_blueprint(payment, url_prefix='/payment')
     app.register_blueprint(home)
     
     # User loader for Flask-Login
