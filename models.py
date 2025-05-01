@@ -67,7 +67,7 @@ class Turf(db.Model):
         slots = TimeSlot.query.filter_by(turf_id=self.id, day_of_week=date.weekday()).all()
         booked_slots = Booking.query.filter_by(
             turf_id=self.id,
-            booking_date=date.date(),
+            booking_date=date,
             status=BookingStatus.CONFIRMED
         ).all()
         
