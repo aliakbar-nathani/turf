@@ -148,20 +148,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to update notification count in the navbar
 function updateNotificationCount() {
-  fetch('/notifications/api/count')
-    .then(response => response.json())
-    .then(data => {
-      const notificationBadge = document.getElementById('notification-count');
-      if (notificationBadge) {
-        if (data.count > 0) {
-          notificationBadge.textContent = data.count;
-          notificationBadge.classList.remove('d-none');
-        } else {
-          notificationBadge.classList.add('d-none');
+  try {
+    fetch('/notifications/api/count')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
-      }
-    })
-    .catch(error => {
-      console.error('Error fetching notification count:', error);
-    });
+        return response.json();
+      })
+      .then(data => {
+        const notificationBadge = document.getElementById('notification-count');
+        if (notificationBadge) {
+          if (data.count > 0) {
+            notificationBadge.textContent = data.count;
+            notificationBadge.classList.remove('d-none');
+          } else {
+            notificationBadge.classList.add('d-none');
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching notification count:', error);
+      });
+  } catch (error) {
+    console.error('Error in updateNotificationCount function:', error);
+  }
 }
