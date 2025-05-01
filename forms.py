@@ -102,7 +102,7 @@ class BookingSearchForm(FlaskForm):
 
 class BookingForm(FlaskForm):
     booking_date = StringField('Date', validators=[DataRequired()])
-    time_slot = SelectField('Time Slot', validators=[DataRequired()], coerce=int)
+    time_slot = SelectField('Time Slot', validators=[DataRequired()], coerce=str)
     negotiation_enabled = HiddenField('Negotiation Enabled', default='0')
     proposed_price = FloatField('Your Proposed Price (optional)', validators=[Optional(), NumberRange(min=0)])
     message = TextAreaField('Message to Owner (optional)', validators=[Optional()])

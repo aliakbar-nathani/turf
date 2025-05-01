@@ -86,7 +86,7 @@ def book_turf(turf_id):
     available_slots = turf.get_available_slots(selected_date)
     
     # Populate the time slot choices
-    time_slot_choices = [(slot.id, f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')} (₹{round(turf.base_price_per_hour * (1 + slot.price_adjustment/100), 2)})") for slot in available_slots]
+    time_slot_choices = [(str(slot.id), f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')} (₹{round(turf.base_price_per_hour * (1 + slot.price_adjustment/100), 2)})") for slot in available_slots]
     form.time_slot.choices = [('', 'Select a time slot')] + time_slot_choices
     
     if form.validate_on_submit():
