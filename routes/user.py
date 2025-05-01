@@ -17,15 +17,18 @@ def dashboard():
     if current_user.is_admin():
         return redirect(url_for('admin.dashboard'))
     
-    # Get recent and upcoming bookings
+    # Get recent bookings (completed or past confirmed bookings)
     recent_bookings = Booking.query.filter_by(
         user_id=current_user.id
     ).filter(
         Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+    ).filter(
+        Booking.booking_date < datetime.utcnow().date()
     ).order_by(
         Booking.booking_date.desc()
     ).limit(5).all()
     
+    # Get upcoming bookings (future confirmed bookings)
     upcoming_bookings = Booking.query.filter_by(
         user_id=current_user.id,
         status=BookingStatus.CONFIRMED
