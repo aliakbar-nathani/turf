@@ -22,7 +22,49 @@
                         </p>
                     </div>
                     
-                    {% if primary_image %}
+                    <!-- Image Carousel -->
+                    {% if all_images %}
+                        <div id="turfImageCarousel" class="carousel slide mb-4" data-bs-ride="carousel">
+                            <!-- Carousel indicators -->
+                            <div class="carousel-indicators">
+                                {% for image in all_images %}
+                                    <button type="button" data-bs-target="#turfImageCarousel" data-bs-slide-to="{{ loop.index0 }}" 
+                                            class="{% if image.is_primary %}active{% endif %}" 
+                                            aria-current="{% if image.is_primary %}true{% else %}false{% endif %}" 
+                                            aria-label="Slide {{ loop.index }}"></button>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Carousel slides -->
+                            <div class="carousel-inner rounded">
+                                {% for image in all_images %}
+                                    <div class="carousel-item {% if image.is_primary %}active{% endif %}">
+                                        <img src="{{ image.url }}" class="d-block w-100" alt="{{ turf.name }} image {{ loop.index }}" style="max-height: 400px; object-fit: cover;">
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Carousel controls -->
+                            <button class="carousel-control-prev" type="button" data-bs-target="#turfImageCarousel" data-bs-slide="prev">
+                                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Previous</span>
+                            </button>
+                            <button class="carousel-control-next" type="button" data-bs-target="#turfImageCarousel" data-bs-slide="next">
+                                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                <span class="visually-hidden">Next</span>
+                            </button>
+                        </div>
+                        
+                        <!-- Image Thumbnails -->
+                        <div class="d-flex flex-wrap gap-2 mb-4 justify-content-center">
+                            {% for image in all_images %}
+                                <div class="turf-thumbnail" data-bs-target="#turfImageCarousel" data-bs-slide-to="{{ loop.index0 }}" style="cursor: pointer;">
+                                    <img src="{{ image.url }}" class="img-thumbnail {% if image.is_primary %}border-primary{% endif %}" 
+                                         alt="Thumbnail {{ loop.index }}" style="width: 80px; height: 60px; object-fit: cover;">
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% elif primary_image %}
                         <div class="mb-4 text-center">
                             <img src="{{ primary_image.url }}" class="img-fluid rounded" alt="{{ turf.name }}" style="max-height: 400px;">
                         </div>
@@ -151,4 +193,45 @@
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap carousel
+        const carousel = document.getElementById('turfImageCarousel');
+        if (carousel) {
+            const bsCarousel = new bootstrap.Carousel(carousel, {
+                interval: 5000,  // Change slide every 5 seconds
+                wrap: true       // Loop back to first slide
+            });
+        }
+        
+        // Handle thumbnail clicks
+        const thumbnails = document.querySelectorAll('.turf-thumbnail');
+        thumbnails.forEach(function(thumbnail) {
+            thumbnail.addEventListener('click', function() {
+                const slideIndex = this.getAttribute('data-bs-slide-to');
+                const carousel = bootstrap.Carousel.getInstance(document.getElementById('turfImageCarousel'));
+                if (carousel) {
+                    carousel.to(parseInt(slideIndex));
+                }
+            });
+        });
+        
+        // Update active thumbnail when carousel slides
+        if (carousel) {
+            carousel.addEventListener('slid.bs.carousel', function() {
+                const activeSlide = document.querySelector('.carousel-item.active');
+                const activeIndex = Array.from(activeSlide.parentNode.children).indexOf(activeSlide);
+                
+                // Update thumbnails active state
+                document.querySelectorAll('.turf-thumbnail img').forEach(function(img, index) {
+                    if (index === activeIndex) {
+                        img.classList.add('border-primary');
+                    } else {
+                        img.classList.remove('border-primary');
+                    }
+                });
+            });
+        }
+    });
+</script>
 {% endblock %}

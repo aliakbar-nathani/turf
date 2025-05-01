@@ -12,8 +12,9 @@ booking = Blueprint('booking', __name__)
 def view_turf(turf_id):
     turf = Turf.query.get_or_404(turf_id)
     
-    # Get primary image
-    primary_image = turf.images.filter_by(is_primary=True).first()
+    # Get all turf images
+    all_images = turf.images.all()
+    primary_image = next((img for img in all_images if img.is_primary), all_images[0] if all_images else None)
     
     # Get available time slots for today
     today = datetime.utcnow().date()
@@ -26,6 +27,7 @@ def view_turf(turf_id):
         'turf/details.html',
         turf=turf,
         primary_image=primary_image,
+        all_images=all_images,
         available_slots=available_slots,
         features=features,
         today=today,

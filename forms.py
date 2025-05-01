@@ -67,6 +67,7 @@ class TurfForm(FlaskForm):
     size = StringField('Size (e.g., 5-a-side)', validators=[Optional(), Length(max=50)])
     indoor = BooleanField('Indoor Turf')
     image_url = StringField('Primary Image URL', validators=[Optional()])
+    additional_images = StringField('Additional Image URLs (comma-separated)', validators=[Optional()])
     submit = SubmitField('Save Turf')
 
 class TimeSlotForm(FlaskForm):
