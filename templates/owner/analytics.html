@@ -198,7 +198,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Load chart data from server
-        const chartData = {{ chart_data|safe }};
+        const chartData = {{ chart_data_json|safe }};
         
         // Render bookings trend chart
         const trendCtx = document.getElementById('bookings-trend').getContext('2d');

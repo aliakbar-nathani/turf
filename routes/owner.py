@@ -423,10 +423,12 @@ def analytics():
     # Get negotiation stats
     negotiations = db.session.query(
         db.func.count(Negotiation.id).label('count'),
-        db.func.avg(db.case(
-            [(Negotiation.is_accepted == True, 100 * Negotiation.counter_price / Negotiation.proposed_price)],
-            else_=None
-        )).label('avg_percentage')
+        db.func.avg(
+            db.case(
+                (Negotiation.is_accepted == True, 100 * Negotiation.counter_price / Negotiation.proposed_price),
+                else_=None
+            )
+        ).label('avg_percentage')
     ).join(Booking).filter(
         Booking.turf_id == selected_turf.id,
         Negotiation.proposed_by == 'user'  # User-initiated negotiations
@@ -435,12 +437,18 @@ def analytics():
     negotiation_count = negotiations.count or 0
     avg_negotiation_percentage = round(negotiations.avg_percentage or 100, 2)
     
-    # Convert data to JSON for JavaScript
-    chart_data = {
+    # Data for charts and JavaScript
+    chart_data_json = {
         'dates': dates,
         'counts': counts,
         'weekly_labels': days_of_week,
         'weekly_data': weekly_data
+    }
+    
+    # For Python / template logic
+    chart_data = {
+        'weekly_data': weekly_data,
+        'weekly_labels': days_of_week
     }
     
     return render_template(
@@ -452,6 +460,7 @@ def analytics():
         recent_bookings=recent_bookings,
         negotiation_count=negotiation_count,
         avg_negotiation_percentage=avg_negotiation_percentage,
-        chart_data=json.dumps(chart_data),
+        chart_data=chart_data,
+        chart_data_json=json.dumps(chart_data_json),
         title='Turf Analytics'
     )
