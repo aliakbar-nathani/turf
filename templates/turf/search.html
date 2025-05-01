@@ -26,7 +26,10 @@
                 </div>
                 <div class="col-md-3">
                     {{ form.date.label(class="form-label") }}
-                    {{ form.date(class="form-control date-picker", placeholder="Select date") }}
+                    <div class="input-group">
+                        {{ form.date(class="form-control datepicker-modern", placeholder="Select date") }}
+                        <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                    </div>
                 </div>
                 <div class="col-md-2">
                     {{ form.indoor.label(class="form-label") }}
@@ -133,20 +136,17 @@
 
 {% block extra_js %}
 <script>
-    // Initialize date picker
+    // Initialize modern date picker
     document.addEventListener('DOMContentLoaded', function() {
-        const datePicker = document.querySelector('.date-picker');
+        const datePicker = document.querySelector('.datepicker-modern');
         if (datePicker) {
-            // Set min date to today
-            const today = new Date().toISOString().split('T')[0];
-            datePicker.setAttribute('min', today);
-            
-            datePicker.type = 'date';
-            
-            datePicker.addEventListener('blur', function() {
-                if (!this.value) {
-                    this.type = 'text';
-                }
+            flatpickr(datePicker, {
+                dateFormat: "Y-m-d",
+                minDate: "today",
+                maxDate: new Date().fp_incr(30), // 30 days from now
+                altInput: true,
+                altFormat: "F j, Y", // More readable format (e.g., "January 1, 2023")
+                disableMobile: false
             });
         }
     });

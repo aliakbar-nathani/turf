@@ -20,7 +20,7 @@
                                 {{ form.booking_date.label(class="form-label") }}
                                 <div class="input-group">
                                     {% if form.booking_date.errors %}
-                                        <input type="text" id="date-picker" class="form-control is-invalid" placeholder="Select a date">
+                                        <input type="text" id="date-picker" class="form-control flatpickr-date is-invalid" placeholder="Select a date">
                                         {{ form.booking_date(id="booking_date", class="d-none") }}
                                         <div class="invalid-feedback">
                                             {% for error in form.booking_date.errors %}
@@ -28,7 +28,7 @@
                                             {% endfor %}
                                         </div>
                                     {% else %}
-                                        <input type="text" id="date-picker" class="form-control" placeholder="Select a date">
+                                        <input type="text" id="date-picker" class="form-control flatpickr-date" placeholder="Select a date">
                                         {{ form.booking_date(id="booking_date", class="d-none") }}
                                     {% endif %}
                                     <span class="input-group-text"><i class="fas fa-calendar"></i></span>

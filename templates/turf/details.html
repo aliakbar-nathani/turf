@@ -82,52 +82,109 @@
         
         <!-- Availability Calendar -->
         <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Check Availability</h5>
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-calendar-alt me-2"></i>Check Availability
+                    </h5>
+                    <span class="badge bg-primary rounded-pill">
+                        {{ available_slots|length }} slots today
+                    </span>
                 </div>
                 <div class="card-body">
-                    <div id="availability-calendar" class="mb-4" data-turf-id="{{ turf.id }}"></div>
+                    <div id="availability-calendar" class="mb-4 shadow-sm rounded" data-turf-id="{{ turf.id }}"></div>
                     
-                    <h5 class="mb-3">Available Slots Today</h5>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="text-dark">Today's Available Slots</h5>
+                            <small class="text-muted">{{ today.strftime('%d %B %Y') }}</small>
+                        </div>
+                        <hr class="my-2">
+                    </div>
+                    
                     <div id="available-slots">
                         {% if available_slots %}
-                            <div class="list-group">
+                            <div class="row g-2">
                                 {% for slot in available_slots %}
-                                    <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="list-group-item list-group-item-action slot-item" data-slot-id="{{ slot.id }}">
-                                        <div class="d-flex w-100 justify-content-between">
-                                            <h6 class="mb-1">{{ slot.start_time.strftime('%I:%M %p') }} - {{ slot.end_time.strftime('%I:%M %p') }}</h6>
-                                            <span class="badge bg-success">₹{{ (turf.base_price_per_hour * (1 + slot.price_adjustment/100))|round(2) }}</span>
-                                        </div>
-                                    </a>
+                                    <div class="col-6">
+                                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="text-decoration-none">
+                                            <div class="card h-100 slot-card border-0 shadow-sm bg-light">
+                                                <div class="card-body p-3">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="h6 mb-0 text-dark">
+                                                            <i class="far fa-clock text-primary me-1"></i>
+                                                            {{ slot.start_time.strftime('%I:%M %p') }}
+                                                        </span>
+                                                        <span class="badge bg-success rounded-pill">₹{{ (turf.base_price_per_hour * (1 + slot.price_adjustment/100))|round(2) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
                                 {% endfor %}
                             </div>
                         {% else %}
-                            <div class="alert alert-info">No available slots for today.</div>
+                            <div class="text-center py-4 bg-light rounded">
+                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                <p class="mb-0">No available slots for today.</p>
+                                <p class="text-muted">Please check another day.</p>
+                            </div>
                         {% endif %}
                     </div>
                     
-                    <div class="d-grid mt-3">
-                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-outline-primary">See All Slots & Book</a>
+                    <div class="d-grid mt-4">
+                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary">
+                            <i class="fas fa-calendar-plus me-2"></i>Book Now
+                        </a>
                     </div>
                 </div>
             </div>
             
             <!-- Map Location (Placeholder) -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Location</h5>
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-white">
+                    <h5 class="mb-0 text-primary">
+                        <i class="fas fa-map-marked-alt me-2"></i>Location
+                    </h5>
+                    <span class="badge bg-secondary rounded-pill">
+                        <i class="fas fa-directions me-1"></i>Directions
+                    </span>
                 </div>
-                <div class="card-body">
-                    <div class="text-center">
-                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid slice" focusable="false">
-                            <rect width="100%" height="100%" fill="#27ae60" opacity="0.2"/>
-                            <text x="50%" y="50%" fill="#444" dy=".3em" text-anchor="middle">Map Placeholder</text>
+                <div class="card-body p-0">
+                    <div class="position-relative">
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid slice" focusable="false" class="rounded-0">
+                            <defs>
+                                <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#5a67d8;stop-opacity:0.2" />
+                                    <stop offset="100%" style="stop-color:#2d5282;stop-opacity:0.2" />
+                                </linearGradient>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grad1)"/>
+                            <circle cx="50%" cy="50%" r="25" fill="#e74c3c" opacity="0.9" />
+                            <circle cx="50%" cy="50%" r="20" fill="#fff" opacity="0.5" />
+                            <circle cx="50%" cy="50%" r="10" fill="#e74c3c" />
                         </svg>
+                        <div class="position-absolute top-0 end-0 m-2">
+                            <button class="btn btn-sm btn-light rounded-circle shadow-sm">
+                                <i class="fas fa-expand-alt"></i>
+                            </button>
+                        </div>
                     </div>
-                    <p class="mt-2">
-                        <i class="fas fa-map-marker-alt me-2 text-danger"></i> {{ turf.address }}, {{ turf.city }}, {{ turf.state }}, {{ turf.postal_code }}
-                    </p>
+                    <div class="p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0">
+                                <div class="bg-light rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-map-marker-alt text-danger"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <p class="mb-1 fw-bold">{{ turf.name }}</p>
+                                <p class="mb-0 text-muted small">
+                                    {{ turf.address }}, {{ turf.city }}, {{ turf.state }}, {{ turf.postal_code }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

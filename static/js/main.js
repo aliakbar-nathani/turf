@@ -101,9 +101,10 @@ function confirmAction(message) {
 
 // Date picker initialization with Flatpickr
 function initDatePicker() {
-  const datePickers = document.querySelectorAll('.date-picker');
-  if (datePickers.length > 0) {
-    datePickers.forEach(picker => {
+  // Initialize all date pickers with datepicker-modern class
+  const modernDatePickers = document.querySelectorAll('.datepicker-modern');
+  if (modernDatePickers.length > 0) {
+    modernDatePickers.forEach(picker => {
       flatpickr(picker, {
         dateFormat: "Y-m-d",
         minDate: "today",
@@ -112,6 +113,23 @@ function initDatePicker() {
         altFormat: "F j, Y", // More readable format (e.g., "January 1, 2023")
         disableMobile: false
       });
+    });
+  }
+  
+  // Initialize all date pickers with flatpickr-date class
+  const flatpickrDatePickers = document.querySelectorAll('.flatpickr-date');
+  if (flatpickrDatePickers.length > 0) {
+    flatpickrDatePickers.forEach(picker => {
+      if (!picker._flatpickr) { // Only initialize if not already initialized
+        flatpickr(picker, {
+          dateFormat: "Y-m-d",
+          minDate: "today",
+          maxDate: new Date().fp_incr(30), // 30 days from now
+          altInput: true,
+          altFormat: "F j, Y", // More readable format (e.g., "January 1, 2023")
+          disableMobile: false
+        });
+      }
     });
   }
 }
