@@ -12,4 +12,5 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "flask-wtf>=1.2.2",
     "stripe>=12.1.0",
+    "twilio>=9.5.2",
 ]
