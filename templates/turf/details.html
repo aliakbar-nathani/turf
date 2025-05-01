@@ -102,7 +102,7 @@
                         {% if current_user.is_authenticated %}
                             <form action="{{ url_for('favorites.toggle_favorite', turf_id=turf.id) }}" method="POST" id="favorite-form">
                                 <button type="submit" class="btn {% if is_favorited %}btn-danger{% else %}btn-outline-danger{% endif %} btn-lg" id="favorite-btn" title="{% if is_favorited %}Remove from favorites{% else %}Add to favorites{% endif %}">
-                                    <i class="fas {% if is_favorited %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
+                                    <i class="{% if is_favorited %}fas fa-heart{% else %}far fa-heart{% endif %}"></i>
                                 </button>
                             </form>
                         {% endif %}
@@ -258,14 +258,14 @@
             if (data.is_favorite) {
                 btn.classList.remove('btn-outline-danger');
                 btn.classList.add('btn-danger');
-                btn.querySelector('i').classList.remove('fa-heart-o');
-                btn.querySelector('i').classList.add('fa-heart');
+                btn.querySelector('i').classList.remove('far');
+                btn.querySelector('i').classList.add('fas');
                 btn.title = 'Remove from favorites';
             } else {
                 btn.classList.remove('btn-danger');
                 btn.classList.add('btn-outline-danger');
-                btn.querySelector('i').classList.remove('fa-heart');
-                btn.querySelector('i').classList.add('fa-heart-o');
+                btn.querySelector('i').classList.remove('fas');
+                btn.querySelector('i').classList.add('far');
                 btn.title = 'Add to favorites';
             }
             
