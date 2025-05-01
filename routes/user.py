@@ -214,36 +214,39 @@ def advanced_search():
         if indoor is not None:
             query = query.filter_by(indoor=indoor)
         
-        # Apply advanced filters
-        if has_parking:
-            query = query.filter_by(has_parking=True)
+        # Execute basic query
+        all_turfs = query.all()
         
-        if has_changing_room:
-            query = query.filter_by(has_changing_room=True)
+        # Apply advanced filters manually
+        filtered_turfs = []
+        for turf in all_turfs:
+            # Skip if any required feature is missing
+            if has_parking and not turf.has_parking:
+                continue
+            if has_changing_room and not turf.has_changing_room:
+                continue
+            if has_shower and not turf.has_shower:
+                continue
+            if has_floodlights and not turf.has_floodlights:
+                continue
+            if has_equipment and not turf.has_equipment:
+                continue
+            if surface_type and turf.surface_type != surface_type:
+                continue
+                
+            # If we got here, add turf to filtered results
+            filtered_turfs.append(turf)
         
-        if has_shower:
-            query = query.filter_by(has_shower=True)
+        # Replace the turfs list with our filtered one
+        turfs = filtered_turfs
         
-        if has_floodlights:
-            query = query.filter_by(has_floodlights=True)
-        
-        if has_equipment:
-            query = query.filter_by(has_equipment=True)
-        
-        if surface_type:
-            query = query.filter_by(surface_type=surface_type)
-        
-        # Apply rating filter
+        # Apply rating filter manually
         if min_rating:
-            # Get turfs with average rating >= min_rating
-            turf_ids_with_min_rating = db.session.query(Review.turf_id).group_by(
-                Review.turf_id
-            ).having(func.avg(Review.rating) >= min_rating).subquery()
-            
-            query = query.filter(Turf.id.in_(turf_ids_with_min_rating))
-        
-        # Execute query
-        turfs = query.all()
+            rated_turfs = []
+            for turf in turfs:
+                if turf.get_average_rating() >= min_rating:
+                    rated_turfs.append(turf)
+            turfs = rated_turfs
         
         # Filter by availability if date is provided
         if date:

@@ -67,14 +67,46 @@ class Turf(db.Model):
     active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Advanced filtering amenities
-    has_parking = db.Column(db.Boolean, default=False)
-    has_changing_room = db.Column(db.Boolean, default=False)
-    has_shower = db.Column(db.Boolean, default=False)
-    has_floodlights = db.Column(db.Boolean, default=False)
-    has_equipment = db.Column(db.Boolean, default=False)
-    has_refreshments = db.Column(db.Boolean, default=False)
-    surface_type = db.Column(db.String(50), nullable=True)  # grass, artificial, indoor, etc.
+    # These properties are not actually in the database but are needed for the model
+    # to match the forms and views. We'll implement them as properties instead.
+    @property
+    def has_parking(self):
+        return self.has_feature('parking')
+        
+    @property
+    def has_changing_room(self):
+        return self.has_feature('changing_room')
+        
+    @property
+    def has_shower(self):
+        return self.has_feature('shower')
+        
+    @property
+    def has_floodlights(self):
+        return self.has_feature('floodlights')
+        
+    @property
+    def has_equipment(self):
+        return self.has_feature('equipment')
+        
+    @property
+    def has_refreshments(self):
+        return self.has_feature('refreshments')
+        
+    @property
+    def surface_type(self):
+        # Try to extract surface type from features
+        if self.features:
+            features_list = self.features.lower().split(',')
+            for surface in ['grass', 'artificial', 'indoor', 'clay', 'concrete']:
+                if surface in features_list:
+                    return surface
+        return None
+        
+    def has_feature(self, feature_name):
+        if not self.features:
+            return False
+        return feature_name.lower() in [f.strip().lower() for f in self.features.split(',')]
     
     # Foreign keys
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
