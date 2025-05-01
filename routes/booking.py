@@ -70,10 +70,9 @@ def book_turf(turf_id):
     turf = Turf.query.get_or_404(turf_id)
     form = BookingForm()
     
-    # Populate day choices dynamically (next 14 days)
+    # Get available dates for the next 14 days (for JavaScript initialization)
     today = datetime.utcnow().date()
-    days = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(14)]
-    form.booking_date.choices = [(day, day) for day in days]
+    available_dates = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(14)]
     
     if form.validate_on_submit():
         # Get the selected date and time slot
@@ -162,6 +161,7 @@ def book_turf(turf_id):
         'turf/booking.html',
         turf=turf,
         form=form,
+        available_dates=available_dates,
         title=f'Book {turf.name}'
     )
 

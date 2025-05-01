@@ -188,15 +188,8 @@
         const bookingDateField = document.getElementById('booking_date');
         
         if (datePicker && bookingDateField) {
-            // Get available dates from the hidden select field
-            const availableDates = [];
-            const dateOptions = bookingDateField.options;
-            
-            for (let i = 0; i < dateOptions.length; i++) {
-                if (dateOptions[i].value) {
-                    availableDates.push(dateOptions[i].value);
-                }
-            }
+            // Get available dates from the server
+            const availableDates = {{ available_dates|tojson }};
             
             // Initialize Flatpickr
             const fp = flatpickr(datePicker, {
