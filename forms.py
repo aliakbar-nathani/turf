@@ -179,11 +179,11 @@ class AdvancedSearchForm(FlaskForm):
     has_floodlights = BooleanField('Floodlights', default=False)
     has_equipment = BooleanField('Equipment', default=False)
     min_rating = SelectField('Minimum Rating', choices=[
-        ('', 'Any Rating'),
-        (3, '3+ Stars'),
-        (4, '4+ Stars'),
-        (5, '5 Stars')
-    ], coerce=int, default='', validators=[Optional()])
+        ('0', 'Any Rating'),
+        ('3', '3+ Stars'),
+        ('4', '4+ Stars'),
+        ('5', '5 Stars')
+    ], coerce=int, default='0', validators=[Optional()])
     surface_type = SelectField('Surface Type', choices=[
         ('', 'Any Surface'),
         ('grass', 'Grass'),

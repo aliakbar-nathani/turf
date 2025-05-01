@@ -253,8 +253,8 @@ def advanced_search():
         # Replace the turfs list with our filtered one
         turfs = filtered_turfs
         
-        # Apply rating filter manually
-        if min_rating:
+        # Apply rating filter manually (min_rating 0 means any rating)
+        if min_rating and min_rating > 0:
             rated_turfs = []
             for turf in turfs:
                 if turf.get_average_rating() >= min_rating:
