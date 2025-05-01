@@ -9,6 +9,18 @@ class UserRole:
     USER = 'user'  # Regular user/player
     OWNER = 'owner'  # Turf owner
     ADMIN = 'admin'  # Admin
+    
+# Define notification types
+class NotificationType:
+    BOOKING_REMINDER = 'booking_reminder'
+    BOOKING_CONFIRMED = 'booking_confirmed'
+    BOOKING_CANCELLED = 'booking_cancelled'
+    PAYMENT_SUCCESS = 'payment_success'
+    PAYMENT_FAILED = 'payment_failed'
+    PRICE_NEGOTIATION = 'price_negotiation'
+    NEW_REVIEW = 'new_review'
+    TURF_FEATURED = 'turf_featured'
+    DISPUTE_UPDATE = 'dispute_update'
 
 
 class User(UserMixin, db.Model):

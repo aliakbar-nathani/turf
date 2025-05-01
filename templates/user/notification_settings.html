@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+
+{% block title %}Notification Settings{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Notification Settings</h1>
+                <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-bell me-1"></i> View Notifications
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('notifications.notification_settings') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <h5 class="mb-3">Email Notifications</h5>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.email_booking_confirmation(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.email_booking_confirmation.label }}</label>
+                            </div>
+                            <div class="form-text">Receive an email when your booking is confirmed</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.email_booking_reminder(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.email_booking_reminder.label }}</label>
+                            </div>
+                            <div class="form-text">Receive reminder emails before your upcoming bookings</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.email_price_negotiation(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.email_price_negotiation.label }}</label>
+                            </div>
+                            <div class="form-text">Receive emails when there are updates to your price negotiations</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.email_turf_promotions(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.email_turf_promotions.label }}</label>
+                            </div>
+                            <div class="form-text">Receive promotional emails about special offers at your favorite turfs</div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <h5 class="mb-3">SMS Notifications</h5>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.sms_booking_reminder(class="form-check-input") }}
+                                <label class="form-check-label">{{ form.sms_booking_reminder.label }}</label>
+                            </div>
+                            <div class="form-text">Receive SMS reminders before your upcoming bookings</div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Make sure your phone number is up-to-date in your 
+                            <a href="{{ url_for('user.profile') }}">profile settings</a> to receive SMS notifications.
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
