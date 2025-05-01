@@ -99,19 +99,18 @@ function confirmAction(message) {
   return confirm(message);
 }
 
-// Date picker initialization
+// Date picker initialization with Flatpickr
 function initDatePicker() {
   const datePickers = document.querySelectorAll('.date-picker');
   if (datePickers.length > 0) {
     datePickers.forEach(picker => {
-      picker.addEventListener('focus', function() {
-        this.type = 'date';
-      });
-      
-      picker.addEventListener('blur', function() {
-        if (!this.value) {
-          this.type = 'text';
-        }
+      flatpickr(picker, {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        maxDate: new Date().fp_incr(30), // 30 days from now
+        altInput: true,
+        altFormat: "F j, Y", // More readable format (e.g., "January 1, 2023")
+        disableMobile: false
       });
     });
   }
