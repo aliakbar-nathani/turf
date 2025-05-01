@@ -128,9 +128,32 @@
                     <h5 class="mb-0">Turf Details</h5>
                 </div>
                 <div class="card-body">
-                    {% set primary_image = turf.images.filter_by(is_primary=True).first() %}
-                    {% if primary_image %}
-                        <img src="{{ primary_image.url }}" class="img-fluid rounded mb-3" alt="{{ turf.name }}">
+                    {% set all_images = turf.images.all() %}
+                    {% if all_images %}
+                        {% if all_images|length > 1 %}
+                            <!-- Mini image carousel -->
+                            <div id="bookingTurfCarousel" class="carousel slide mb-3" data-bs-ride="carousel">
+                                <div class="carousel-inner rounded">
+                                    {% for image in all_images %}
+                                        <div class="carousel-item {% if image.is_primary %}active{% endif %}">
+                                            <img src="{{ image.url }}" class="d-block w-100" alt="{{ turf.name }} image {{ loop.index }}" style="height: 180px; object-fit: cover;">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if all_images|length > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#bookingTurfCarousel" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Previous</span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#bookingTurfCarousel" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Next</span>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <img src="{{ all_images[0].url }}" class="img-fluid rounded mb-3" alt="{{ turf.name }}">
+                        {% endif %}
                     {% endif %}
                     
                     <h5>{{ turf.name }}</h5>
@@ -217,6 +240,15 @@
     // Main script
     
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize booking turf carousel
+        const carousel = document.getElementById('bookingTurfCarousel');
+        if (carousel) {
+            new bootstrap.Carousel(carousel, {
+                interval: 5000,  // Change slide every 5 seconds
+                wrap: true       // Loop back to first slide
+            });
+        }
+        
         // Initialize date picker
         const datePicker = document.getElementById('date-picker');
         const bookingDateField = document.getElementById('booking_date');
