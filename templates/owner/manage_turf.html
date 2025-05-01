@@ -194,6 +194,36 @@
                                         <img src="{{ form.image_url.data }}" class="img-thumbnail" alt="Turf Image Preview" style="max-height: 200px;">
                                     </div>
                                 {% endif %}
+                                
+                                <div class="mb-3">
+                                    {{ form.additional_images.label(class="form-label") }}
+                                    {% if form.additional_images.errors %}
+                                        {{ form.additional_images(class="form-control is-invalid") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.additional_images.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        {{ form.additional_images(class="form-control", placeholder="Enter comma-separated URLs for additional images") }}
+                                    {% endif %}
+                                    <small class="form-text text-muted">Enter URLs for additional images, separated by commas</small>
+                                </div>
+                                
+                                {% if form.additional_images.data %}
+                                    <div class="mb-3">
+                                        <p class="mb-2">Additional Image Previews:</p>
+                                        <div class="row">
+                                            {% for url in form.additional_images.data.split(',') %}
+                                                {% if url.strip() %}
+                                                    <div class="col-md-6 mb-2">
+                                                        <img src="{{ url.strip() }}" class="img-thumbnail" alt="Additional Turf Image" style="max-height: 100px;">
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
                         </div>
                         

@@ -111,7 +111,19 @@ def new_turf():
                 turf_id=turf.id
             )
             db.session.add(image)
-            db.session.commit()
+            
+        # Add additional images if provided
+        if form.additional_images.data:
+            additional_urls = [url.strip() for url in form.additional_images.data.split(',') if url.strip()]
+            for url in additional_urls:
+                image = TurfImage(
+                    url=url,
+                    is_primary=False,
+                    turf_id=turf.id
+                )
+                db.session.add(image)
+                
+        db.session.commit()
         
         flash('Your turf has been created!', 'success')
         return redirect(url_for('owner.turfs'))
@@ -158,8 +170,25 @@ def edit_turf(turf_id):
                     turf_id=turf.id
                 )
                 db.session.add(image)
+        
+        # Update additional images if provided
+        if form.additional_images.data:
+            # Delete existing non-primary images
+            existing_images = TurfImage.query.filter_by(turf_id=turf.id, is_primary=False).all()
+            for img in existing_images:
+                db.session.delete(img)
+                
+            # Add new images
+            additional_urls = [url.strip() for url in form.additional_images.data.split(',') if url.strip()]
+            for url in additional_urls:
+                image = TurfImage(
+                    url=url,
+                    is_primary=False,
+                    turf_id=turf.id
+                )
+                db.session.add(image)
             
-            db.session.commit()
+        db.session.commit()
         
         flash('Your turf has been updated!', 'success')
         return redirect(url_for('owner.turfs'))
@@ -181,6 +210,11 @@ def edit_turf(turf_id):
         primary_image = TurfImage.query.filter_by(turf_id=turf.id, is_primary=True).first()
         if primary_image:
             form.image_url.data = primary_image.url
+            
+        # Get additional images if they exist
+        additional_images = TurfImage.query.filter_by(turf_id=turf.id, is_primary=False).all()
+        if additional_images:
+            form.additional_images.data = ', '.join([img.url for img in additional_images])
     
     return render_template('owner/manage_turf.html', form=form, turf=turf, title='Edit Turf')
 
