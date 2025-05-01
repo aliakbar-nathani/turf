@@ -451,6 +451,23 @@ def analytics():
         'weekly_labels': days_of_week
     }
     
+    # Calculate most popular/least popular days
+    most_popular_day_index = 0
+    least_popular_day_index = 0
+    max_bookings = 0
+    min_bookings = float('inf')
+    
+    for i, bookings in enumerate(weekly_data):
+        if bookings > max_bookings:
+            max_bookings = bookings
+            most_popular_day_index = i
+        if bookings < min_bookings and bookings > 0:
+            min_bookings = bookings
+            least_popular_day_index = i
+    
+    most_popular_day = days_of_week[most_popular_day_index] if weekly_data else 'No data'
+    least_popular_day = days_of_week[least_popular_day_index] if weekly_data and min_bookings < float('inf') else 'No data'
+    
     return render_template(
         'owner/analytics.html',
         turfs=turfs,
@@ -462,5 +479,7 @@ def analytics():
         avg_negotiation_percentage=avg_negotiation_percentage,
         chart_data=chart_data,
         chart_data_json=json.dumps(chart_data_json),
+        most_popular_day=most_popular_day,
+        least_popular_day=least_popular_day,
         title='Turf Analytics'
     )

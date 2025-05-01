@@ -124,11 +124,10 @@
                             <tr>
                                 <td>Most Popular Day</td>
                                 <td class="text-end">
-                                    {% if chart_data %}
-                                        {% set max_index = chart_data.weekly_data.index(max(chart_data.weekly_data)) %}
-                                        {{ chart_data.weekly_labels[max_index] }}
+                                    {% if most_popular_day == 'No data' %}
+                                        <span class="text-muted">{{ most_popular_day }}</span>
                                     {% else %}
-                                        <span class="text-muted">No data</span>
+                                        {{ most_popular_day }}
                                     {% endif %}
                                 </td>
                             </tr>
@@ -181,10 +180,8 @@
                                 <li>High negotiation rate - revisit your pricing strategy</li>
                             {% endif %}
                             
-                            {% set max_index = chart_data.weekly_data.index(max(chart_data.weekly_data)) if chart_data else 0 %}
-                            {% set min_index = chart_data.weekly_data.index(min(chart_data.weekly_data)) if chart_data and chart_data.weekly_data else 0 %}
-                            {% if chart_data and chart_data.weekly_data %}
-                                <li>Consider dynamic pricing: higher for {{ chart_data.weekly_labels[max_index] }}, lower for {{ chart_data.weekly_labels[min_index] }}</li>
+                            {% if most_popular_day != 'No data' and least_popular_day != 'No data' %}
+                                <li>Consider dynamic pricing: higher for {{ most_popular_day }}, lower for {{ least_popular_day }}</li>
                             {% endif %}
                         </ul>
                     </div>
