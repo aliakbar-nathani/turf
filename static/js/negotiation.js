@@ -3,31 +3,44 @@ document.addEventListener('DOMContentLoaded', function() {
     // Elements for negotiation
     const priceSlider = document.getElementById('counter-slider');
     const counterPriceInput = document.getElementById('proposed_price');
-    const originalPriceEl = document.getElementById('original-price');
     const savingsEl = document.getElementById('savings');
     const actionInput = document.getElementById('action');
     const negotiationForm = document.getElementById('negotiation-form');
+    const maxPriceEl = document.getElementById('max-price');
+    const minPriceEl = document.getElementById('min-price');
     
     // If negotiation form elements exist
-    if (priceSlider && counterPriceInput && originalPriceEl) {
+    if (priceSlider && counterPriceInput) {
       // Parse the original price safely
-      let originalPrice = 0;
-      try {
-        originalPrice = parseFloat(originalPriceEl.dataset.price || originalPriceEl.textContent);
+      let originalPrice = parseFloat(priceSlider.max);
+      let minPrice = parseFloat(priceSlider.min);
+      
+      // Fallback if we can't get values from the elements
+      if (isNaN(originalPrice) || originalPrice <= 0) {
+        // Try to extract from the max-price element
+        if (maxPriceEl) {
+          const priceText = maxPriceEl.textContent.replace(/[^0-9.]/g, '');
+          originalPrice = parseFloat(priceText);
+        }
         if (isNaN(originalPrice) || originalPrice <= 0) {
           originalPrice = 1000; // Fallback default
+          console.warn("Using fallback original price");
         }
-      } catch (e) {
-        console.error("Failed to parse original price:", e);
-        originalPrice = 1000; // Fallback default
       }
       
-      const minPrice = Math.max(1, originalPrice * 0.7); // Limit to 70% of original price, minimum 1
+      if (isNaN(minPrice) || minPrice <= 0) {
+        // Try to extract from the min-price element
+        if (minPriceEl) {
+          const priceText = minPriceEl.textContent.replace(/[^0-9.]/g, '');
+          minPrice = parseFloat(priceText);
+        }
+        if (isNaN(minPrice) || minPrice <= 0) {
+          minPrice = originalPrice * 0.7; // Fallback to 70% of original
+          console.warn("Using fallback min price");
+        }
+      }
       
-      // Initialize slider
-      priceSlider.min = minPrice.toFixed(2);
-      priceSlider.max = originalPrice.toFixed(2);
-      priceSlider.value = originalPrice.toFixed(2);
+      console.log("Negotiation slider setup with prices:", {originalPrice, minPrice});
       
       // Initialize counter price input if empty
       if (!counterPriceInput.value) {
