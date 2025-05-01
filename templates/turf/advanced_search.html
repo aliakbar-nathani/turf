@@ -1,0 +1,131 @@
+{% extends "layout.html" %}
+
+{% block title %}Advanced Search{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4">Advanced Search</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('user.advanced_search') }}">
+                {{ form.hidden_tag() }}
+                
+                <div class="row mb-4">
+                    <div class="col-md-12 mb-3">
+                        <h4>Basic Filters</h4>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.city.label }}</label>
+                        {{ form.city(class="form-control", placeholder="Enter city name") }}
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.date.label }}</label>
+                        {{ form.date(class="form-control", type="date") }}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ form.min_price.label }}</label>
+                        {{ form.min_price(class="form-control", placeholder="Min") }}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ form.max_price.label }}</label>
+                        {{ form.max_price(class="form-control", placeholder="Max") }}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ form.indoor.label }}</label>
+                        {{ form.indoor(class="form-select") }}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12 mb-3">
+                        <h4>Advanced Filters</h4>
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ form.surface_type.label }}</label>
+                        {{ form.surface_type(class="form-select") }}
+                    </div>
+                    
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ form.min_rating.label }}</label>
+                        {{ form.min_rating(class="form-select") }}
+                    </div>
+                    
+                    <div class="col-md-4"></div>
+                    
+                    <div class="col-md-12 mb-3">
+                        <h5>Amenities</h5>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.has_parking(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.has_parking.label }}</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.has_changing_room(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.has_changing_room.label }}</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.has_shower(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.has_shower.label }}</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.has_floodlights(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.has_floodlights.label }}</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.has_equipment(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.has_equipment.label }}</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('user.search') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Basic Search
+                    </a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="mt-5">
+        <h4>Popular Cities</h4>
+        <div class="row row-cols-2 row-cols-md-6 g-3 mt-2">
+            {% for city in cities %}
+                <div class="col">
+                    <a href="{{ url_for('user.advanced_search', city=city) }}" class="text-decoration-none">
+                        <div class="card h-100 text-center">
+                            <div class="card-body py-4">
+                                <h5 class="mb-0">{{ city }}</h5>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
