@@ -187,6 +187,9 @@ def book_turf(turf_id):
         if not negotiation_enabled:
             user_price = None
         
+        # Get payment method
+        payment_method = form.payment_option.data
+        
         # Create the booking
         booking = Booking(
             user_id=current_user.id,
@@ -197,6 +200,8 @@ def book_turf(turf_id):
             original_price=total_price,
             total_price=total_price if not user_price else user_price,
             user_proposed_price=user_price if negotiation_enabled else None,
+            payment_method=payment_method,
+            payment_status='paid' if payment_method == 'pay_on_arrival' else 'unpaid',
             status=BookingStatus.PENDING if negotiation_enabled and user_price and user_price < total_price else BookingStatus.CONFIRMED
         )
         
@@ -218,8 +223,13 @@ def book_turf(turf_id):
             flash('Your booking request with price negotiation has been sent to the turf owner!', 'success')
             return redirect(url_for('user.bookings'))
         else:
-            # Redirect to payment if price is accepted
-            return redirect(url_for('payment.checkout', booking_id=booking.id))
+            # If payment method is pay_on_arrival, redirect to bookings page
+            if booking.payment_method == 'pay_on_arrival':
+                flash('Your booking has been confirmed! Please pay on arrival at the turf.', 'success')
+                return redirect(url_for('user.bookings'))
+            else:
+                # Redirect to payment if price is accepted and not pay-on-arrival
+                return redirect(url_for('payment.checkout', booking_id=booking.id))
     
     return render_template(
         'turf/booking.html',
@@ -260,10 +270,20 @@ def negotiate(booking_id):
             if latest_negotiation and latest_negotiation.proposed_by == 'owner':
                 latest_negotiation.is_accepted = True
             
+            # Check payment method of the booking
+            if booking.payment_method == 'pay_on_arrival':
+                booking.payment_status = 'paid'  # Mark as paid for pay on arrival
+            
             db.session.commit()
             
             flash('You have accepted the owner\'s price!', 'success')
-            return redirect(url_for('payment.checkout', booking_id=booking.id))
+            
+            # Redirect based on payment method
+            if booking.payment_method == 'pay_on_arrival':
+                flash('Your booking has been confirmed! Please pay on arrival at the turf.', 'success')
+                return redirect(url_for('user.bookings'))
+            else:
+                return redirect(url_for('payment.checkout', booking_id=booking.id))
         
         elif action == 'counter':
             # Make a counter offer

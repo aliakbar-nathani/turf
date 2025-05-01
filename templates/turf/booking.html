@@ -388,6 +388,38 @@
                 const event = new Event('change');
                 timeSlotSelect.dispatchEvent(event);
             }
+            
+            // Handle payment option changes
+            const paymentOptionSelect = document.getElementById('payment-option-select');
+            const payOnlineInfo = document.getElementById('pay-online-info');
+            const payOnArrivalInfo = document.getElementById('pay-on-arrival-info');
+            
+            if (paymentOptionSelect && payOnlineInfo && payOnArrivalInfo) {
+                paymentOptionSelect.addEventListener('change', function() {
+                    const selectedOption = this.value;
+                    
+                    if (selectedOption === 'pay_online') {
+                        payOnlineInfo.classList.remove('d-none');
+                        payOnArrivalInfo.classList.add('d-none');
+                        // Update submit button text
+                        const submitBtn = document.querySelector('[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.textContent = 'Proceed to Payment';
+                        }
+                    } else if (selectedOption === 'pay_on_arrival') {
+                        payOnlineInfo.classList.add('d-none');
+                        payOnArrivalInfo.classList.remove('d-none');
+                        // Update submit button text
+                        const submitBtn = document.querySelector('[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.textContent = 'Confirm Booking';
+                        }
+                    }
+                });
+                
+                // Trigger the change event on load
+                paymentOptionSelect.dispatchEvent(new Event('change'));
+            }
         }
         
         // Handle negotiation toggle
