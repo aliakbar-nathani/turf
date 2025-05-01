@@ -50,6 +50,32 @@
                             </div>
                         </div>
                         
+                        <!-- Payment Options -->
+                        <div class="mb-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Payment Options</h5>
+                                </div>
+                                <div class="card-body">
+                                    {{ form.payment_option.label(class="form-label") }}
+                                    {% if form.payment_option.errors %}
+                                        {{ form.payment_option(class="form-select is-invalid", id="payment-option-select") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.payment_option.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        {{ form.payment_option(class="form-select", id="payment-option-select") }}
+                                    {% endif %}
+                                    <div class="form-text mt-2" id="payment-option-help">
+                                        <div id="pay-online-info"><i class="fas fa-info-circle me-1 text-info"></i> Pay securely online with credit/debit card via Stripe.</div>
+                                        <div id="pay-on-arrival-info" class="d-none"><i class="fas fa-info-circle me-1 text-info"></i> Pay with cash or card when you arrive at the turf.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Price Negotiation Toggle -->
                         <div class="mb-4">
                             <div class="form-check form-switch">

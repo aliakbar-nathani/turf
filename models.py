@@ -235,6 +235,7 @@ class Booking(db.Model):
     user_proposed_price = db.Column(db.Float, nullable=True)  # User's proposed price
     status = db.Column(db.String(20), nullable=False, default=BookingStatus.PENDING)
     payment_status = db.Column(db.String(20), nullable=False, default='unpaid')
+    payment_method = db.Column(db.String(20), nullable=False, default='pay_online')  # 'pay_online' or 'pay_on_arrival'
     payment_id = db.Column(db.String(100), nullable=True)  # External payment reference
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
