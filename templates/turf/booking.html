@@ -174,6 +174,48 @@
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 <script>
+    // Function to fetch time slots via AJAX
+    function fetchTimeSlots(date) {
+        const timeSlotSelect = document.getElementById('time_slot');
+        if (!timeSlotSelect) return;
+        
+        // Show loading indicator
+        timeSlotSelect.innerHTML = '<option value="">Loading time slots...</option>';
+        
+        // Fetch available slots
+        fetch(`{{ url_for('booking.check_availability', turf_id=turf.id) }}?date=${date}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error fetching time slots:', data.error);
+                    timeSlotSelect.innerHTML = '<option value="">Error loading time slots</option>';
+                    return;
+                }
+                
+                // Populate time slot options
+                if (data.slots && data.slots.length > 0) {
+                    // Clear and add default option
+                    timeSlotSelect.innerHTML = '<option value="">Select a time slot</option>';
+                    
+                    // Add time slot options
+                    data.slots.forEach(slot => {
+                        const option = document.createElement('option');
+                        option.value = slot.id;
+                        option.textContent = `${slot.start_time} - ${slot.end_time} (₹${slot.price})`;
+                        timeSlotSelect.appendChild(option);
+                    });
+                } else {
+                    timeSlotSelect.innerHTML = '<option value="">No available time slots</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                timeSlotSelect.innerHTML = '<option value="">Error loading time slots</option>';
+            });
+    }
+    
+    // Main script
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize date picker
         const datePicker = document.getElementById('date-picker');
@@ -196,14 +238,16 @@
                     // Update the hidden form field
                     bookingDateField.value = dateStr;
                     
-                    // Reload the page with the new date to update available time slots
-                    window.location.href = `${window.location.pathname}?date=${dateStr}`;
+                    // Fetch available time slots via AJAX
+                    fetchTimeSlots(dateStr);
                 }
             });
             
             // Set initial value if one exists
             if (bookingDateField.value) {
                 fp.setDate(bookingDateField.value);
+                // Also load time slots for this date
+                fetchTimeSlots(bookingDateField.value);
             }
         }
         // Handle time slot selection

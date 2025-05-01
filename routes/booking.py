@@ -74,20 +74,15 @@ def book_turf(turf_id):
     today = datetime.utcnow().date()
     available_dates = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(14)]
     
-    # Get time slots for the selected date or today by default
-    selected_date = today
+    # Set default empty choices for the time slot field
+    form.time_slot.choices = [('', 'Select a time slot')]
+    
+    # Set initial date if provided in query params
     if request.args.get('date'):
         try:
-            selected_date = datetime.strptime(request.args.get('date'), '%Y-%m-%d').date()
+            form.booking_date.data = request.args.get('date')
         except ValueError:
             pass
-    
-    # Load available time slots for the turf on this date
-    available_slots = turf.get_available_slots(selected_date)
-    
-    # Populate the time slot choices
-    time_slot_choices = [(str(slot.id), f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')} (₹{round(turf.base_price_per_hour * (1 + slot.price_adjustment/100), 2)})") for slot in available_slots]
-    form.time_slot.choices = [('', 'Select a time slot')] + time_slot_choices
     
     if form.validate_on_submit():
         # Get the selected date and time slot
