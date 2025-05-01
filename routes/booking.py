@@ -190,6 +190,18 @@ def book_turf(turf_id):
         # Get payment method
         payment_method = form.payment_option.data
         
+        # Determine booking status based on payment method and negotiation
+        booking_status = BookingStatus.PENDING
+        if negotiation_enabled and user_price and user_price < total_price:
+            # If negotiation with lower price, always pending
+            booking_status = BookingStatus.PENDING
+        elif payment_method == 'pay_on_arrival':
+            # Pay on arrival bookings are confirmed directly
+            booking_status = BookingStatus.CONFIRMED
+        else:
+            # Online payment bookings are "payment pending" until payment is completed
+            booking_status = BookingStatus.PAYMENT_PENDING
+        
         # Create the booking
         booking = Booking(
             user_id=current_user.id,
@@ -202,7 +214,7 @@ def book_turf(turf_id):
             user_proposed_price=user_price if negotiation_enabled else None,
             payment_method=payment_method,
             payment_status='pending_payment',
-            status=BookingStatus.PENDING if negotiation_enabled and user_price and user_price < total_price else BookingStatus.CONFIRMED
+            status=booking_status
         )
         
         db.session.add(booking)

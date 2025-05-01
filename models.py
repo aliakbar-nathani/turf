@@ -220,6 +220,7 @@ class TimeSlot(db.Model):
 class BookingStatus:
     PENDING = 'pending'  # Initial request
     NEGOTIATING = 'negotiating'  # Price negotiation in progress
+    PAYMENT_PENDING = 'payment_pending'  # Payment needs to be completed
     CONFIRMED = 'confirmed'  # Booking confirmed
     CANCELLED = 'cancelled'  # Booking cancelled
     COMPLETED = 'completed'  # Booking completed

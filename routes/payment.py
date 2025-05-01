@@ -4,7 +4,7 @@ import stripe
 import os
 
 from app import db
-from models import Booking, BookingStatus, Turf
+from models import Booking, BookingStatus, Turf, Notification, NotificationType
 
 payment = Blueprint('payment', __name__)
 
@@ -21,8 +21,8 @@ def checkout(booking_id):
     if booking.user_id != current_user.id:
         abort(403)
     
-    # Check if booking is in confirmed status
-    if booking.status != BookingStatus.CONFIRMED:
+    # Check if booking is in confirmed or payment_pending status
+    if booking.status != BookingStatus.CONFIRMED and booking.status != BookingStatus.PAYMENT_PENDING:
         flash('This booking cannot be processed for payment.', 'danger')
         return redirect(url_for('user.bookings'))
     
@@ -103,6 +103,21 @@ def payment_success(booking_id):
             session = stripe.checkout.Session.retrieve(booking.payment_id)
             if session.payment_status == 'paid':
                 booking.payment_status = 'paid'
+                # If booking was in payment_pending status, update it to confirmed
+                if booking.status == BookingStatus.PAYMENT_PENDING:
+                    booking.status = BookingStatus.CONFIRMED
+                db.session.commit()
+                
+                # Create a notification for the user
+                notification = Notification(
+                    user_id=booking.user_id,
+                    type=NotificationType.PAYMENT_SUCCESS,
+                    title='Payment Successful',
+                    message=f'Your payment for booking #{booking.id} has been successfully processed.',
+                    booking_id=booking.id,
+                    turf_id=booking.turf_id
+                )
+                db.session.add(notification)
                 db.session.commit()
             else:
                 # This is unlikely to happen in this flow, but added for completeness

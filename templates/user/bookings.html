@@ -38,7 +38,13 @@
                     <div class="card h-100 booking-item">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">{{ booking.turf.name }}</h5>
-                            <span class="booking-status status-{{ booking.status.lower() }}">{{ booking.status }}</span>
+                            <span class="booking-status status-{{ booking.status.lower() }}">
+                                {% if booking.status == 'payment_pending' %}
+                                    Payment Pending
+                                {% else %}
+                                    {{ booking.status|title }}
+                                {% endif %}
+                            </span>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
@@ -70,7 +76,7 @@
                                     <a href="{{ url_for('booking.negotiate', booking_id=booking.id) }}" class="btn btn-sm btn-warning mb-2">
                                         <i class="fas fa-comments-dollar me-1"></i> Negotiate
                                     </a>
-                                {% elif booking.status == 'confirmed' and booking.payment_status != 'paid' %}
+                                {% elif (booking.status == 'confirmed' or booking.status == 'payment_pending') and booking.payment_status != 'paid' and booking.payment_method == 'pay_online' %}
                                     <a href="{{ url_for('payment.checkout', booking_id=booking.id) }}" class="btn btn-sm btn-success mb-2">
                                         <i class="fas fa-credit-card me-1"></i> Pay Now
                                     </a>
