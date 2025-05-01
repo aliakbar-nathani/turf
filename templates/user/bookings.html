@@ -53,6 +53,8 @@
                                 <div><i class="fas fa-money-bill-wave me-2"></i> <strong>Payment:</strong> 
                                     {% if booking.payment_status == 'paid' %}
                                         <span class="badge bg-success">Paid</span>
+                                    {% elif booking.payment_status == 'pending_payment' %}
+                                        <span class="badge bg-warning text-dark">Pending Payment</span>
                                     {% else %}
                                         <span class="badge bg-warning text-dark">Unpaid</span>
                                     {% endif %}

@@ -201,7 +201,7 @@ def book_turf(turf_id):
             total_price=total_price if not user_price else user_price,
             user_proposed_price=user_price if negotiation_enabled else None,
             payment_method=payment_method,
-            payment_status='paid' if payment_method == 'pay_on_arrival' else 'unpaid',
+            payment_status='pending_payment',
             status=BookingStatus.PENDING if negotiation_enabled and user_price and user_price < total_price else BookingStatus.CONFIRMED
         )
         
@@ -270,9 +270,8 @@ def negotiate(booking_id):
             if latest_negotiation and latest_negotiation.proposed_by == 'owner':
                 latest_negotiation.is_accepted = True
             
-            # Check payment method of the booking
-            if booking.payment_method == 'pay_on_arrival':
-                booking.payment_status = 'paid'  # Mark as paid for pay on arrival
+            # Update payment status based on payment method
+            booking.payment_status = 'pending_payment'
             
             db.session.commit()
             
