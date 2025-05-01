@@ -66,8 +66,27 @@ class TurfForm(FlaskForm):
     features = StringField('Features (comma-separated)', validators=[Optional()])
     size = StringField('Size (e.g., 5-a-side)', validators=[Optional(), Length(max=50)])
     indoor = BooleanField('Indoor Turf')
+    
+    # Advanced amenities
+    has_parking = BooleanField('Parking Available')
+    has_changing_room = BooleanField('Changing Rooms')
+    has_shower = BooleanField('Showers')
+    has_floodlights = BooleanField('Floodlights')
+    has_equipment = BooleanField('Equipment Available')
+    has_refreshments = BooleanField('Refreshments Available')
+    surface_type = SelectField('Surface Type', choices=[
+        ('grass', 'Grass'), 
+        ('artificial', 'Artificial Turf'),
+        ('indoor', 'Indoor'),
+        ('clay', 'Clay'),
+        ('concrete', 'Concrete'),
+        ('other', 'Other')
+    ])
+    
+    # Images
     image_url = StringField('Primary Image URL', validators=[Optional()])
     additional_images = StringField('Additional Image URLs (comma-separated)', validators=[Optional()])
+    
     submit = SubmitField('Save Turf')
 
 class TimeSlotForm(FlaskForm):
@@ -119,3 +138,75 @@ class DisputeForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired(), Length(max=100)])
     description = TextAreaField('Description', validators=[DataRequired()])
     submit = SubmitField('Submit Dispute')
+
+
+class ReviewForm(FlaskForm):
+    rating = SelectField('Rating', choices=[
+        (5, '★★★★★ Excellent'),
+        (4, '★★★★ Very Good'),
+        (3, '★★★ Good'),
+        (2, '★★ Fair'),
+        (1, '★ Poor')
+    ], coerce=int, validators=[DataRequired()])
+    comment = TextAreaField('Your Review', validators=[Optional(), Length(max=1000)])
+    submit = SubmitField('Submit Review')
+
+
+class OwnerReviewResponseForm(FlaskForm):
+    response = TextAreaField('Your Response', validators=[DataRequired()])
+    submit = SubmitField('Submit Response')
+
+
+class AdvancedSearchForm(FlaskForm):
+    city = StringField('City', validators=[Optional()])
+    date = StringField('Date', validators=[Optional()])
+    min_price = FloatField('Min Price', validators=[Optional(), NumberRange(min=0)])
+    max_price = FloatField('Max Price', validators=[Optional(), NumberRange(min=0)])
+    indoor = SelectField('Type', choices=[
+        ('', 'Any'), 
+        ('True', 'Indoor'), 
+        ('False', 'Outdoor')
+    ], validators=[Optional()])
+    
+    # Advanced filters
+    has_parking = BooleanField('Parking Available', default=False)
+    has_changing_room = BooleanField('Changing Rooms', default=False)
+    has_shower = BooleanField('Showers', default=False)
+    has_floodlights = BooleanField('Floodlights', default=False)
+    has_equipment = BooleanField('Equipment', default=False)
+    min_rating = SelectField('Minimum Rating', choices=[
+        ('', 'Any Rating'),
+        (3, '3+ Stars'),
+        (4, '4+ Stars'),
+        (5, '5 Stars')
+    ], coerce=int, default='', validators=[Optional()])
+    surface_type = SelectField('Surface Type', choices=[
+        ('', 'Any Surface'),
+        ('grass', 'Grass'),
+        ('artificial', 'Artificial Turf'),
+        ('indoor', 'Indoor'),
+        ('clay', 'Clay'),
+        ('concrete', 'Concrete')
+    ], validators=[Optional()])
+    
+    submit = SubmitField('Search')
+
+
+class NotificationSettingsForm(FlaskForm):
+    email_booking_confirmation = BooleanField('Email Booking Confirmations', default=True)
+    email_booking_reminder = BooleanField('Email Booking Reminders', default=True)
+    sms_booking_reminder = BooleanField('SMS Booking Reminders', default=False)
+    email_price_negotiation = BooleanField('Email Price Negotiation Updates', default=True)
+    email_turf_promotions = BooleanField('Email Promotions for Favorite Turfs', default=False)
+    submit = SubmitField('Save Notification Settings')
+
+
+class ShareTurfForm(FlaskForm):
+    platform = SelectField('Share on', choices=[
+        ('copy', 'Copy Link'),
+        ('whatsapp', 'WhatsApp'),
+        ('facebook', 'Facebook'),
+        ('twitter', 'Twitter'),
+        ('email', 'Email')
+    ])
+    submit = SubmitField('Share')
