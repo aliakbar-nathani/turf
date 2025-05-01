@@ -83,7 +83,7 @@
                                 <label class="form-check-label" for="negotiation-toggle">
                                     <i class="fas fa-handshake me-2"></i> I want to negotiate the price
                                 </label>
-                                {{ form.negotiation_enabled(id="negotiation-enabled-field") }}
+                                {{ form.negotiation_enabled(id="negotiation-enabled-field", type="hidden") }}
                             </div>
                         </div>
                         
@@ -368,7 +368,7 @@
                             const maxPrice = Math.ceil(price * 1.2);   // 120% of original
                             
                             priceSlider.min = minPrice;
-                            priceSlider.max = price;
+                            priceSlider.max = maxPrice;
                             priceSlider.value = price;
                             
                             // Update min/max price labels
@@ -376,7 +376,13 @@
                                 document.getElementById('min-price').textContent = `Min: ₹${minPrice}`;
                             }
                             if (document.getElementById('max-price')) {
-                                document.getElementById('max-price').textContent = `Max: ₹${price}`;
+                                document.getElementById('max-price').textContent = `Max: ₹${maxPrice}`;
+                            }
+                            
+                            // Update savings text
+                            const savingsEl = document.getElementById('savings');
+                            if (savingsEl) {
+                                savingsEl.textContent = `Save ₹0.00 (0%)`;
                             }
                         }
                     }
@@ -471,23 +477,31 @@
                 });
                 
                 function updateSavingsText() {
-                    const originalPrice = parseFloat(document.getElementById('original_price').value);
+                    const originalPriceEl = document.getElementById('original_price');
+                    if (!originalPriceEl || !proposedPriceInput || !savingsEl) return;
+                    
+                    const originalPrice = parseFloat(originalPriceEl.value);
                     const proposedPrice = parseFloat(proposedPriceInput.value);
                     
                     if (!isNaN(originalPrice) && !isNaN(proposedPrice)) {
                         const savings = originalPrice - proposedPrice;
                         const savingsPercent = (savings / originalPrice * 100).toFixed(1);
                         
-                        if (savingsEl) {
+                        if (savings > 0) {
                             savingsEl.textContent = `Save ₹${savings.toFixed(2)} (${savingsPercent}%)`;
-                            
-                            // Update color based on savings
-                            if (savings > 0) {
-                                savingsEl.className = 'text-success';
-                            } else {
-                                savingsEl.className = 'text-danger';
-                            }
+                            savingsEl.className = 'text-success';
+                        } else if (savings < 0) {
+                            const premium = Math.abs(savings);
+                            const premiumPercent = Math.abs(savingsPercent);
+                            savingsEl.textContent = `Pay ₹${premium.toFixed(2)} extra (${premiumPercent}%)`;
+                            savingsEl.className = 'text-danger';
+                        } else {
+                            savingsEl.textContent = 'Original price (0%)';
+                            savingsEl.className = 'text-muted';
                         }
+                    } else {
+                        savingsEl.textContent = 'Save ₹0.00 (0%)';
+                        savingsEl.className = 'text-muted';
                     }
                 }
             }
