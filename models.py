@@ -283,18 +283,6 @@ class Favorite(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'turf_id', name='unique_user_turf_favorite'),)
 
 
-class NotificationType:
-    BOOKING_REMINDER = 'booking_reminder'
-    BOOKING_CONFIRMED = 'booking_confirmed'
-    BOOKING_CANCELLED = 'booking_cancelled'
-    PAYMENT_SUCCESS = 'payment_success'
-    PAYMENT_FAILED = 'payment_failed'
-    PRICE_NEGOTIATION = 'price_negotiation'
-    NEW_REVIEW = 'new_review'
-    TURF_FEATURED = 'turf_featured'
-    DISPUTE_UPDATE = 'dispute_update'
-
-
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(50), nullable=False)  # Use values from NotificationType
@@ -316,3 +304,20 @@ class Notification(db.Model):
     booking = db.relationship('Booking', backref=db.backref('notifications', lazy='dynamic'))
     turf = db.relationship('Turf', backref=db.backref('notifications', lazy='dynamic'))
     review = db.relationship('Review', backref=db.backref('notifications', lazy='dynamic'))
+    
+    
+class NotificationSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email_booking_confirmation = db.Column(db.Boolean, default=True)
+    email_booking_reminder = db.Column(db.Boolean, default=True)
+    sms_booking_reminder = db.Column(db.Boolean, default=False)
+    email_price_negotiation = db.Column(db.Boolean, default=True)
+    email_turf_promotions = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Foreign keys
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, unique=True)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('notification_settings', uselist=False))

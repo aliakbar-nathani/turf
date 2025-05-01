@@ -1,90 +1,100 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, abort
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import desc
 
 from app import db
-from models import Notification
+from models import Notification, NotificationSetting
 from forms import NotificationSettingsForm
 
-notifications_bp = Blueprint('notifications', __name__)
+notifications = Blueprint('notifications', __name__, url_prefix='/notifications')
 
-@notifications_bp.route('/notifications')
+@notifications.route('/')
 @login_required
 def list_notifications():
-    """View all notifications for the current user"""
+    """Display user's notifications"""
     # Get unread notifications
     unread_notifications = Notification.query.filter_by(
-        user_id=current_user.id, read=False
+        user_id=current_user.id, 
+        read=False
     ).order_by(desc(Notification.created_at)).all()
     
-    # Get read notifications (limit to recent 20)
+    # Get read notifications (limit to 20 most recent)
     read_notifications = Notification.query.filter_by(
-        user_id=current_user.id, read=True
+        user_id=current_user.id, 
+        read=True
     ).order_by(desc(Notification.created_at)).limit(20).all()
     
-    return render_template('user/notifications.html', 
+    return render_template(
+        'user/notifications.html',
         unread_notifications=unread_notifications,
         read_notifications=read_notifications
     )
 
-@notifications_bp.route('/notifications/mark_read/<int:notification_id>', methods=['POST'])
+@notifications.route('/<int:notification_id>/read', methods=['POST'])
 @login_required
 def mark_as_read(notification_id):
     """Mark a notification as read"""
-    notification = Notification.query.get_or_404(notification_id)
-    
-    # Security check - make sure the notification belongs to the current user
-    if notification.user_id != current_user.id:
-        abort(403)  # Forbidden
+    notification = Notification.query.filter_by(
+        id=notification_id, 
+        user_id=current_user.id
+    ).first_or_404()
     
     notification.read = True
     db.session.commit()
     
-    # If this is an Ajax request, return JSON response
+    # Check if it's an AJAX request
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'status': 'success'})
+        return jsonify({
+            'status': 'success',
+            'message': 'Notification marked as read'
+        })
     
+    # If not AJAX, redirect back to notifications
+    flash('Notification marked as read', 'success')
     return redirect(url_for('notifications.list_notifications'))
 
-@notifications_bp.route('/notifications/mark_all_read', methods=['POST'])
+@notifications.route('/mark-all-read', methods=['POST'])
 @login_required
 def mark_all_as_read():
     """Mark all notifications as read"""
-    # Update all notifications for the current user
     Notification.query.filter_by(
-        user_id=current_user.id, read=False
+        user_id=current_user.id, 
+        read=False
     ).update({Notification.read: True})
     
     db.session.commit()
     
-    # If this is an Ajax request, return JSON response
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'status': 'success'})
-    
     flash('All notifications marked as read', 'success')
     return redirect(url_for('notifications.list_notifications'))
 
-@notifications_bp.route('/notifications/settings', methods=['GET', 'POST'])
+@notifications.route('/notifications/settings', methods=['GET', 'POST'])
 @login_required
 def notification_settings():
-    """Update notification preferences"""
-    form = NotificationSettingsForm()
+    """Manage notification settings"""
+    # Get or create notification settings for the user
+    settings = NotificationSetting.query.filter_by(user_id=current_user.id).first()
+    if not settings:
+        settings = NotificationSetting(user_id=current_user.id)
+        db.session.add(settings)
+        db.session.commit()
     
-    # Get user's current notification settings from a user preferences table
-    # or use defaults if not set yet
+    form = NotificationSettingsForm(obj=settings)
+    
     if form.validate_on_submit():
-        # Save the notification settings (in a real app, store these in a user preferences table)
-        flash('Notification preferences updated!', 'success')
-        return redirect(url_for('user.profile'))
+        form.populate_obj(settings)
+        db.session.commit()
+        flash('Notification settings updated successfully', 'success')
+        return redirect(url_for('notifications.notification_settings'))
     
     return render_template('user/notification_settings.html', form=form)
 
-@notifications_bp.route('/api/notifications/count')
+@notifications.route('/api/notifications/count')
 @login_required
-def unread_count():
-    """Get count of unread notifications (for AJAX calls)"""
-    count = Notification.query.filter_by(user_id=current_user.id, read=False).count()
+def get_notification_count():
+    """Return the count of unread notifications for API usage"""
+    count = Notification.query.filter_by(
+        user_id=current_user.id, 
+        read=False
+    ).count()
     
-    return jsonify({
-        'count': count
-    })
+    return jsonify({'count': count})

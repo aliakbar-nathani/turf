@@ -58,8 +58,8 @@ with app.app_context():
     from routes.payment import payment
     from routes.home import home
     from routes.reviews import reviews_bp
-    from routes.favorites import favorites_bp
-    from routes.notifications import notifications_bp
+    from routes.favorites import favorites
+    from routes.notifications import notifications
     
     # Register blueprints
     app.register_blueprint(auth, url_prefix='/auth')
@@ -69,8 +69,8 @@ with app.app_context():
     app.register_blueprint(booking, url_prefix='/bookings')
     app.register_blueprint(payment, url_prefix='/payment')
     app.register_blueprint(reviews_bp, url_prefix='/reviews')
-    app.register_blueprint(favorites_bp, url_prefix='/favorites')  
-    app.register_blueprint(notifications_bp, url_prefix='/notifications')
+    app.register_blueprint(favorites)  
+    app.register_blueprint(notifications)
     app.register_blueprint(home)
     
     # User loader for Flask-Login
