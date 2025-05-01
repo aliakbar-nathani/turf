@@ -140,8 +140,8 @@ document.addEventListener('DOMContentLoaded', function() {
             timeSlotSelect.appendChild(option);
           });
           
-          // Add change handler to update price
-          timeSlotSelect.addEventListener('change', updateBookingPrice);
+          // We don't need to add another change handler here
+          // as it's already handled in the booking.html page
         }
         
         // Render slots in calendar

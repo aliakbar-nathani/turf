@@ -84,15 +84,52 @@ def book_turf(turf_id):
     today = datetime.utcnow().date()
     available_dates = [(today + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(14)]
     
-    # Set default empty choices for the time slot field
-    form.time_slot.choices = [('', 'Select a time slot')]
-    
     # Set initial date if provided in query params
     if request.args.get('date'):
         try:
             form.booking_date.data = request.args.get('date')
+            # Fetch available time slots for the selected date
+            selected_date = datetime.strptime(request.args.get('date'), '%Y-%m-%d').date()
+            available_slots = turf.get_available_slots(selected_date)
+            
+            # Create choices for the time slot field
+            form.time_slot.choices = [('', 'Select a time slot')]
+            for slot in available_slots:
+                # Calculate adjusted price
+                adjusted_price = turf.base_price_per_hour
+                if slot.price_adjustment:
+                    adjusted_price = adjusted_price * (1 + slot.price_adjustment / 100)
+                
+                # Add the time slot option
+                label = f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')} (₹{round(adjusted_price, 2)})"
+                form.time_slot.choices.append((str(slot.id), label))
         except ValueError:
-            pass
+            # Default for invalid date
+            form.time_slot.choices = [('', 'Select a time slot')]
+    else:
+        # Default when no date is selected
+        form.time_slot.choices = [('', 'Select a time slot')]
+    
+    # If form is submitted but not valid, update slot choices
+    if form.is_submitted() and not form.validate():
+        # If the booking date is provided, refresh the time slot choices with the available slots
+        if form.booking_date.data:
+            try:
+                booking_date = datetime.strptime(form.booking_date.data, '%Y-%m-%d').date()
+                available_slots = turf.get_available_slots(booking_date)
+                
+                form.time_slot.choices = [('', 'Select a time slot')]
+                for slot in available_slots:
+                    # Calculate adjusted price
+                    adjusted_price = turf.base_price_per_hour
+                    if slot.price_adjustment:
+                        adjusted_price = adjusted_price * (1 + slot.price_adjustment / 100)
+                    
+                    # Add the time slot option
+                    label = f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')} (₹{round(adjusted_price, 2)})"
+                    form.time_slot.choices.append((str(slot.id), label))
+            except ValueError:
+                pass
     
     if form.validate_on_submit():
         # Get the selected date and time slot

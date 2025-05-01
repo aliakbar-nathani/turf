@@ -224,11 +224,39 @@
                     data.slots.forEach(slot => {
                         const option = document.createElement('option');
                         option.value = slot.id;
-                        option.textContent = `${slot.start_time} - ${slot.end_time} (₹${slot.price})`;
+                        // Format time to AM/PM format
+                        const startParts = slot.start_time.split(':');
+                        const endParts = slot.end_time.split(':');
+                        const startHour = parseInt(startParts[0]);
+                        const endHour = parseInt(endParts[0]);
+                        const startAmPm = startHour >= 12 ? 'PM' : 'AM';
+                        const endAmPm = endHour >= 12 ? 'PM' : 'AM';
+                        const formattedStartHour = startHour % 12 || 12;
+                        const formattedEndHour = endHour % 12 || 12;
+                        const formattedStartTime = `${formattedStartHour}:${startParts[1]} ${startAmPm}`;
+                        const formattedEndTime = `${formattedEndHour}:${endParts[1]} ${endAmPm}`;
+                        
+                        option.textContent = `${formattedStartTime} - ${formattedEndTime} (₹${slot.price})`;
+                        // Store price as a data attribute for easy access
+                        option.dataset.price = slot.price;
                         timeSlotSelect.appendChild(option);
                     });
+                    
+                    // Enable the select
+                    timeSlotSelect.disabled = false;
                 } else {
                     timeSlotSelect.innerHTML = '<option value="">No available time slots</option>';
+                    timeSlotSelect.disabled = true;
+                }
+                
+                // Reset price display
+                if (document.getElementById('total-price')) {
+                    document.getElementById('total-price').textContent = '₹0.00';
+                }
+                
+                // Trigger change event to update UI
+                if (timeSlotSelect.value !== "") {
+                    timeSlotSelect.dispatchEvent(new Event('change'));
                 }
             })
             .catch(error => {
