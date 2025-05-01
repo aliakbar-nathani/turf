@@ -116,8 +116,13 @@ def book_turf(turf_id):
         
         total_price = adjusted_price * duration_hours
         
-        # Apply user's price negotiation if provided
+        # Apply user's price negotiation if provided and negotiation is enabled
         user_price = form.proposed_price.data
+        negotiation_enabled = form.negotiation_enabled.data == '1'
+        
+        # If negotiation is not enabled, ignore any proposed price
+        if not negotiation_enabled:
+            user_price = None
         
         # Create the booking
         booking = Booking(
@@ -128,14 +133,14 @@ def book_turf(turf_id):
             end_time=time_slot.end_time,
             original_price=total_price,
             total_price=total_price if not user_price else user_price,
-            user_proposed_price=user_price,
-            status=BookingStatus.PENDING if user_price and user_price < total_price else BookingStatus.CONFIRMED
+            user_proposed_price=user_price if negotiation_enabled else None,
+            status=BookingStatus.PENDING if negotiation_enabled and user_price and user_price < total_price else BookingStatus.CONFIRMED
         )
         
         db.session.add(booking)
         
-        # If user proposed a different price, create a negotiation record
-        if user_price and user_price < total_price:
+        # If user proposed a different price and negotiation is enabled, create a negotiation record
+        if negotiation_enabled and user_price and user_price < total_price:
             negotiation = Negotiation(
                 booking_id=booking.id,
                 proposed_price=user_price,

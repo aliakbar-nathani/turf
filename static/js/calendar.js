@@ -218,10 +218,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const proposedPriceEl = document.getElementById('proposed_price');
     const priceSliderEl = document.getElementById('priceSlider');
     const totalPriceEl = document.getElementById('total-price');
+    const minPriceEl = document.getElementById('min-price');
+    const maxPriceEl = document.getElementById('max-price');
     
     if (timeSlotSelect && timeSlotSelect.selectedIndex > 0) {
       const selectedOption = timeSlotSelect.options[timeSlotSelect.selectedIndex];
       const price = parseFloat(selectedOption.dataset.price);
+      const minPrice = price * 0.7; // Allow up to 30% discount
       
       // Update displayed price
       if (totalPriceEl) {
@@ -234,13 +237,45 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       
       if (proposedPriceEl) {
-        proposedPriceEl.value = price.toFixed(2);
+        // Only update proposed price if the user hasn't checked the negotiation toggle
+        // or if it's equal to the previous original price (not manually changed)
+        const negotiationToggle = document.getElementById('negotiation-toggle');
+        if (!negotiationToggle || !negotiationToggle.checked) {
+          proposedPriceEl.value = price.toFixed(2);
+        }
       }
       
       if (priceSliderEl) {
         priceSliderEl.max = price.toFixed(2);
-        priceSliderEl.min = (price * 0.7).toFixed(2);
+        priceSliderEl.min = minPrice.toFixed(2);
         priceSliderEl.value = price.toFixed(2);
+        
+        // Update price range labels
+        if (minPriceEl) {
+          minPriceEl.textContent = `Min: ₹${minPrice.toFixed(2)}`;
+        }
+        
+        if (maxPriceEl) {
+          maxPriceEl.textContent = `Max: ₹${price.toFixed(2)}`;
+        }
+      }
+      
+      // Update savings text if present
+      const savingsEl = document.getElementById('savings');
+      if (savingsEl && proposedPriceEl) {
+        const proposedPrice = parseFloat(proposedPriceEl.value);
+        if (!isNaN(proposedPrice)) {
+          const savings = price - proposedPrice;
+          const savingsPercent = (savings / price * 100).toFixed(1);
+          savingsEl.textContent = `Save ₹${savings.toFixed(2)} (${savingsPercent}%)`;
+          
+          // Update color based on savings
+          if (savings > 0) {
+            savingsEl.className = 'text-success';
+          } else {
+            savingsEl.className = 'text-danger';
+          }
+        }
       }
     }
   }
