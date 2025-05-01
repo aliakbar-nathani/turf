@@ -18,16 +18,21 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 {{ form.booking_date.label(class="form-label") }}
-                                {% if form.booking_date.errors %}
-                                    {{ form.booking_date(class="form-select is-invalid") }}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.booking_date.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    {{ form.booking_date(class="form-select") }}
-                                {% endif %}
+                                <div class="input-group">
+                                    {% if form.booking_date.errors %}
+                                        <input type="text" id="date-picker" class="form-control is-invalid" placeholder="Select a date">
+                                        {{ form.booking_date(id="booking_date", class="d-none") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.booking_date.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <input type="text" id="date-picker" class="form-control" placeholder="Select a date">
+                                        {{ form.booking_date(id="booking_date", class="d-none") }}
+                                    {% endif %}
+                                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 {{ form.time_slot.label(class="form-label") }}
@@ -178,6 +183,45 @@
 <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date picker
+        const datePicker = document.getElementById('date-picker');
+        const bookingDateField = document.getElementById('booking_date');
+        
+        if (datePicker && bookingDateField) {
+            // Get available dates from the hidden select field
+            const availableDates = [];
+            const dateOptions = bookingDateField.options;
+            
+            for (let i = 0; i < dateOptions.length; i++) {
+                if (dateOptions[i].value) {
+                    availableDates.push(dateOptions[i].value);
+                }
+            }
+            
+            // Initialize Flatpickr
+            const fp = flatpickr(datePicker, {
+                dateFormat: "Y-m-d",
+                minDate: "today",
+                maxDate: new Date().fp_incr(30), // 30 days from now
+                enable: availableDates,
+                altInput: true,
+                altFormat: "F j, Y", // More readable format (e.g., "January 1, 2023")
+                disableMobile: false,
+                onChange: function(selectedDates, dateStr) {
+                    // Update the hidden form field
+                    bookingDateField.value = dateStr;
+                    
+                    // Trigger change event to load available slots
+                    const event = new Event('change');
+                    bookingDateField.dispatchEvent(event);
+                }
+            });
+            
+            // Set initial value if one exists
+            if (bookingDateField.value) {
+                fp.setDate(bookingDateField.value);
+            }
+        }
         // Handle negotiation toggle
         const negotiationToggle = document.getElementById('negotiation-toggle');
         const negotiationSection = document.getElementById('negotiation-section');

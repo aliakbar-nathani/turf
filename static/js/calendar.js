@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Function to load available slots from the API
   function loadAvailableSlots(turfId, date) {
-    const url = `/turfs/${turfId}/availability?date=${date}`;
+    const url = `/bookings/turfs/${turfId}/availability?date=${date}`;
     const slotsContainer = document.getElementById('available-slots');
     const timeSlotSelect = document.getElementById('time_slot');
     
