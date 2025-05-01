@@ -151,7 +151,7 @@
         
         // Update notification count in navbar
         function updateNotificationCount() {
-            fetch('/api/notifications/count')
+            fetch('/notifications/api/count')
                 .then(response => response.json())
                 .then(data => {
                     const countElement = document.querySelector('#notification-count');

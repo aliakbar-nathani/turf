@@ -67,7 +67,7 @@ def mark_all_as_read():
     flash('All notifications marked as read', 'success')
     return redirect(url_for('notifications.list_notifications'))
 
-@notifications.route('/notifications/settings', methods=['GET', 'POST'])
+@notifications.route('/settings', methods=['GET', 'POST'])
 @login_required
 def notification_settings():
     """Manage notification settings"""
@@ -88,7 +88,7 @@ def notification_settings():
     
     return render_template('user/notification_settings.html', form=form)
 
-@notifications.route('/api/notifications/count')
+@notifications.route('/api/count')
 @login_required
 def get_notification_count():
     """Return the count of unread notifications for API usage"""

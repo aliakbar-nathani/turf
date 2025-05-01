@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const turfId = this.getAttribute('data-turf-id');
             const heartIcon = this.querySelector('i');
             
-            fetch(`/turf/${turfId}/favorite`, {
+            fetch(`/favorites/turf/${turfId}/favorite`, {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'

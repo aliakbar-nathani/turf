@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
+  // Check for notification count updates
+  if (document.getElementById('notification-count')) {
+    updateNotificationCount();
+    // Update every 30 seconds
+    setInterval(updateNotificationCount, 30000);
+  }
+  
   // Enable Bootstrap tooltips
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -138,3 +145,23 @@ function initDatePicker() {
 document.addEventListener('DOMContentLoaded', function() {
   initDatePicker();
 });
+
+// Function to update notification count in the navbar
+function updateNotificationCount() {
+  fetch('/notifications/api/count')
+    .then(response => response.json())
+    .then(data => {
+      const notificationBadge = document.getElementById('notification-count');
+      if (notificationBadge) {
+        if (data.count > 0) {
+          notificationBadge.textContent = data.count;
+          notificationBadge.classList.remove('d-none');
+        } else {
+          notificationBadge.classList.add('d-none');
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching notification count:', error);
+    });
+}
