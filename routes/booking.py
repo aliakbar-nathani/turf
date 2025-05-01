@@ -192,9 +192,12 @@ def book_turf(turf_id):
         
         # Determine booking status based on payment method and negotiation
         booking_status = BookingStatus.PENDING
+        
+        # If negotiation is enabled with a lower price, set status to negotiating
         if negotiation_enabled and user_price and user_price < total_price:
-            # If negotiation with lower price, always pending
-            booking_status = BookingStatus.PENDING
+            booking_status = BookingStatus.NEGOTIATING
+            # For negotiation, payment will be handled after negotiation is complete
+            payment_method = 'pending_negotiation'
         elif payment_method == 'pay_on_arrival':
             # Pay on arrival bookings are confirmed directly
             booking_status = BookingStatus.CONFIRMED
@@ -272,7 +275,6 @@ def negotiate(booking_id):
         
         if action == 'accept':
             # Accept owner's counter offer
-            booking.status = BookingStatus.CONFIRMED
             
             # Update the latest negotiation
             latest_negotiation = Negotiation.query.filter_by(
@@ -282,7 +284,13 @@ def negotiate(booking_id):
             if latest_negotiation and latest_negotiation.proposed_by == 'owner':
                 latest_negotiation.is_accepted = True
             
-            # Update payment status based on payment method
+            # If payment method was pending_negotiation, prompt for payment method now
+            if booking.payment_method == 'pending_negotiation':
+                # Redirect to payment selection page
+                return redirect(url_for('booking.select_payment', booking_id=booking.id))
+            
+            # For existing payment methods
+            booking.status = BookingStatus.CONFIRMED if booking.payment_method == 'pay_on_arrival' else BookingStatus.PAYMENT_PENDING
             booking.payment_status = 'pending_payment'
             
             db.session.commit()

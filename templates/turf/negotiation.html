@@ -78,9 +78,12 @@
                                 
                                 <div class="mb-3">
                                     <label for="counter-slider" class="form-label">Your Counter Offer</label>
-                                    <input type="range" class="form-range" id="counter-slider" min="0" max="100" step="1">
-                                    <div class="price-range">
-                                        <small id="min-price" class="text-muted">Min: ₹0</small>
+                                    <input type="range" class="form-range" id="counter-slider" 
+                                           min="{{ booking.original_price * 0.7 }}" 
+                                           max="{{ booking.original_price }}" 
+                                           step="10">
+                                    <div class="price-range d-flex justify-content-between">
+                                        <small id="min-price" class="text-muted">Min: ₹{{ "%.2f"|format(booking.original_price * 0.7) }}</small>
                                         <small id="savings" class="text-success">Save ₹0.00 (0%)</small>
                                         <small id="max-price" class="text-muted">Max: ₹{{ booking.original_price }}</small>
                                     </div>
