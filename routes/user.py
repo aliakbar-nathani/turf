@@ -116,11 +116,16 @@ def search():
                 date = None
         min_price = form.min_price.data or request.args.get('min_price', None, type=float)
         max_price = form.max_price.data or request.args.get('max_price', None, type=float)
-        indoor = form.indoor.data if form.indoor.data is not None else request.args.get('indoor', None) 
+        indoor = form.indoor.data if form.indoor.data is not None else request.args.get('indoor', '') 
+        
+        # Convert string values to appropriate boolean types
         if indoor == 'True':
             indoor = True
         elif indoor == 'False':
             indoor = False
+        else:
+            # Empty string or any other value means we don't filter by indoor/outdoor
+            indoor = None
         
         # Build query
         query = Turf.query.filter_by(active=True)
@@ -183,11 +188,16 @@ def advanced_search():
                 date = None
         min_price = form.min_price.data or request.args.get('min_price', None, type=float)
         max_price = form.max_price.data or request.args.get('max_price', None, type=float)
-        indoor = form.indoor.data if form.indoor.data is not None else request.args.get('indoor', None) 
+        indoor = form.indoor.data if form.indoor.data is not None else request.args.get('indoor', '') 
+        
+        # Convert string values to appropriate boolean types
         if indoor == 'True':
             indoor = True
         elif indoor == 'False':
             indoor = False
+        else:
+            # Empty string or any other value means we don't filter by indoor/outdoor
+            indoor = None
         
         # Get advanced filters
         has_parking = form.has_parking.data
