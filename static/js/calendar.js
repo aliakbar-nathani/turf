@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Get turf ID from the data attribute on the calendar container
   const calendarEl = document.getElementById('availability-calendar');
+  
+  // If the calendar element doesn't exist on the page, exit early (it's been removed)
   if (!calendarEl) return;
   
   const turfId = calendarEl.dataset.turfId;

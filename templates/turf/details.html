@@ -80,60 +80,17 @@
             </div>
         </div>
         
-        <!-- Availability Calendar -->
         <div class="col-lg-4">
             <div class="card mb-4 shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center bg-white">
                     <h5 class="mb-0 text-primary">
-                        <i class="fas fa-calendar-alt me-2"></i>Check Availability
+                        <i class="fas fa-calendar-plus me-2"></i>Book This Turf
                     </h5>
-                    <span class="badge bg-primary rounded-pill">
-                        {{ available_slots|length }} slots today
-                    </span>
                 </div>
-                <div class="card-body">
-                    <div id="availability-calendar" class="mb-4 shadow-sm rounded" data-turf-id="{{ turf.id }}"></div>
-                    
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="text-dark">Today's Available Slots</h5>
-                            <small class="text-muted">{{ today.strftime('%d %B %Y') }}</small>
-                        </div>
-                        <hr class="my-2">
-                    </div>
-                    
-                    <div id="available-slots">
-                        {% if available_slots %}
-                            <div class="row g-2">
-                                {% for slot in available_slots %}
-                                    <div class="col-6">
-                                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="text-decoration-none">
-                                            <div class="card h-100 slot-card border-0 shadow-sm bg-light">
-                                                <div class="card-body p-3">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <span class="h6 mb-0 text-dark">
-                                                            <i class="far fa-clock text-primary me-1"></i>
-                                                            {{ slot.start_time.strftime('%I:%M %p') }}
-                                                        </span>
-                                                        <span class="badge bg-success rounded-pill">₹{{ (turf.base_price_per_hour * (1 + slot.price_adjustment/100))|round(2) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-4 bg-light rounded">
-                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                <p class="mb-0">No available slots for today.</p>
-                                <p class="text-muted">Please check another day.</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="d-grid mt-4">
-                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary">
+                <div class="card-body text-center">
+                    <p class="mb-4">Ready to play? Book this turf now to secure your spot!</p>
+                    <div class="d-grid">
+                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary btn-lg">
                             <i class="fas fa-calendar-plus me-2"></i>Book Now
                         </a>
                     </div>
