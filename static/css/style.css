@@ -1,375 +1,226 @@
-/* Modern Minimalist styling for TurfBook */
-
-/* Custom Variables */
-:root {
-  --primary-color: #4F46E5; /* Indigo */
-  --primary-hover: #4338CA;
-  --secondary-color: #10B981; /* Emerald */
-  --accent-color: #F97316; /* Orange */
-  --success-color: #22C55E; /* Green */
-  --warning-color: #F59E0B; /* Amber */
-  --danger-color: #EF4444; /* Red */
-  --light-color: #F9FAFB; /* Gray-50 */
-  --gray-100: #F3F4F6;
-  --gray-200: #E5E7EB;
-  --gray-300: #D1D5DB;
-  --gray-400: #9CA3AF;
-  --gray-500: #6B7280;
-  --gray-600: #4B5563;
-  --gray-700: #374151;
-  --gray-800: #1F2937;
-  --gray-900: #111827;
-}
-
-/* General Styling */
-body {
-  padding-top: 72px; /* For fixed navbar */
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  background-color: var(--light-color);
-  color: var(--gray-800);
-}
-
-main {
-  flex: 1;
-}
-
-.container {
-  max-width: 1200px;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: -0.025em;
-}
-
-/* Card Styling */
-.card {
-  border-radius: 1rem;
-  overflow: hidden;
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
-}
-
-.card-img-top {
-  height: 220px;
-  object-fit: cover;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-.card-title {
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
-
-/* Button Styling */
-.btn {
-  padding: 0.6rem 1.5rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
-}
-
-.btn-lg {
-  padding: 0.8rem 2rem;
-  font-size: 1.1rem;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-primary:hover, 
-.btn-primary:focus {
-  background-color: var(--primary-hover);
-  border-color: var(--primary-hover);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  border-color: var(--secondary-color);
-}
-
-.btn-secondary:hover {
-  background-color: #0ea271;
-  border-color: #0ea271;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
-}
-
-.btn-outline-primary {
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.btn-outline-primary:hover {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
-}
-
-/* Hero Section */
-.hero {
-  background-color: #F0F5FF; /* Light indigo background */
-  color: var(--gray-900);
-  padding: 6rem 0;
-  position: relative;
-  border-radius: 0 0 2rem 2rem;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 2;
-}
-
-.hero h1 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  line-height: 1.1;
-  margin-bottom: 1.5rem;
-  color: var(--gray-900);
-}
-
-/* Features */
-.feature-icon {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-  background-color: var(--light-color);
-  color: var(--primary-color);
-}
-
-/* Turf Cards */
-.turf-card {
-  margin-bottom: 1.5rem;
-}
-
-.turf-price {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 0.3rem 0.7rem;
-  border-radius: 20px;
-  font-weight: bold;
-}
-
-.turf-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.turf-feature {
-  background-color: var(--light-color);
-  color: var(--dark-color);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-
-/* Booking Calendar */
-.fc .fc-event {
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.fc .selected-slot {
-  border: 2px solid var(--accent-color) !important;
-  transform: scale(1.05);
-  z-index: 10;
-}
-
-.available-slots-container {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Price Negotiation */
-.negotiation-container {
-  padding: 1.5rem;
-  border-radius: 0.5rem;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
-}
-
-.price-slider {
-  margin: 2rem 0;
-}
-
-.price-range {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.5rem;
-}
-
-/* Negotiation Timeline */
-.negotiation-timeline {
-  position: relative;
-  padding: 1rem 0;
-}
-
-.negotiation-timeline::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 20px;
-  width: 2px;
-  background-color: var(--light-color);
-}
-
-.timeline-item {
-  position: relative;
-  padding-left: 45px;
-  margin-bottom: 1.5rem;
-  opacity: 0;
-  transform: translateX(-20px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.timeline-item.visible {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.timeline-item::before {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 5px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background-color: var(--secondary-color);
-  z-index: 1;
-}
-
-.timeline-item.user::before {
-  background-color: var(--primary-color);
-}
-
-.timeline-item.owner::before {
-  background-color: var(--secondary-color);
-}
-
-.timeline-content {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  background-color: var(--light-color);
-}
-
-.timeline-date {
-  font-size: 0.8rem;
-  color: var(--secondary-color);
-}
-
-/* Dashboard */
-.stats-card {
-  border-left: 4px solid var(--primary-color);
-  transition: transform 0.3s;
-}
-
-.stats-card:hover {
-  transform: translateY(-5px);
-}
-
-.stats-card .card-title {
-  font-size: 0.9rem;
-  font-weight: normal;
-  text-transform: uppercase;
-}
-
-.stats-card .stats-value {
-  font-size: 1.8rem;
-  font-weight: bold;
-}
-
-.chart-container {
-  height: 300px;
-  position: relative;
-}
-
-/* User bookings */
-.booking-item {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1rem;
-  transition: transform 0.2s;
-}
-
-.booking-item:hover {
-  transform: translateY(-3px);
-}
-
+/* Booking status badges */
 .booking-status {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.8rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.status-confirmed {
-  background-color: rgba(46, 204, 113, 0.2);
-  color: #27ae60;
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
 }
 
 .status-pending {
-  background-color: rgba(241, 196, 15, 0.2);
-  color: #f39c12;
+    background-color: #ffc107;
+    color: #212529;
 }
 
-.status-negotiating {
-  background-color: rgba(52, 152, 219, 0.2);
-  color: #2980b9;
+.status-confirmed {
+    background-color: #198754;
+    color: #fff;
 }
 
 .status-cancelled {
-  background-color: rgba(231, 76, 60, 0.2);
-  color: #e74c3c;
+    background-color: #dc3545;
+    color: #fff;
 }
 
 .status-completed {
-  background-color: rgba(149, 165, 166, 0.2);
-  color: #7f8c8d;
+    background-color: #6c757d;
+    color: #fff;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .hero h1 {
+.status-negotiating {
+    background-color: #0dcaf0;
+    color: #212529;
+}
+
+.status-payment_pending {
+    background-color: #fd7e14;
+    color: #fff;
+}
+
+/* Add spacing to booking cards */
+.booking-item {
+    transition: transform 0.2s;
+}
+
+.booking-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Booking details page */
+.turf-image-container {
+    position: relative;
+    overflow: hidden;
+    height: 400px;
+    border-radius: 0.5rem;
+}
+
+.turf-image-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.booking-form-container {
+    background-color: rgba(var(--bs-light-rgb), 0.95);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Payment styles */
+.payment-method-card {
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.payment-method-card:hover {
+    transform: translateY(-5px);
+}
+
+.payment-method-card.selected {
+    border-color: var(--bs-primary);
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.payment-method-card .check-icon {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: var(--bs-primary);
+}
+
+.payment-method-card.selected .check-icon {
+    display: block;
+}
+
+/* Negotiation styles */
+.negotiation-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.negotiation-messages {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.message-bubble {
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    max-width: 80%;
+}
+
+.user-message {
+    background-color: var(--bs-info-bg-subtle);
+    border-bottom-right-radius: 0;
+    margin-left: auto;
+    border: 1px solid var(--bs-info-border-subtle);
+}
+
+.owner-message {
+    background-color: var(--bs-light);
+    border-bottom-left-radius: 0;
+    margin-right: auto;
+    border: 1px solid var(--bs-secondary-border-subtle);
+}
+
+/* Timeline for booking status */
+.booking-timeline {
+    position: relative;
+    padding-left: 45px;
+}
+
+.timeline-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.timeline-item::before {
+    content: "";
+    width: 2px;
+    height: 100%;
+    background-color: var(--bs-gray-400);
+    position: absolute;
+    left: -30px;
+    top: 0;
+}
+
+.timeline-item:last-child::before {
+    height: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -38px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: var(--bs-gray-400);
+    border: 2px solid var(--bs-white);
+}
+
+.timeline-item.active .timeline-marker {
+    background-color: var(--bs-primary);
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.timeline-item.completed .timeline-marker {
+    background-color: var(--bs-success);
+}
+
+/* User dashboard styles */
+.stat-card {
+    transition: transform 0.2s;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
     font-size: 2rem;
-  }
-  
-  .stats-card .stats-value {
-    font-size: 1.4rem;
-  }
-  
-  .chart-container {
-    height: 250px;
-  }
-  
-  .timeline-item {
-    padding-left: 35px;
-  }
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* Turf details styles */
+.feature-badge {
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.review-card {
+    border-left: 4px solid var(--bs-primary);
+}
+
+.star-rating .fas {
+    color: #ffc107;
+}
+
+.star-rating .far {
+    color: #dee2e6;
+}
+
+/* Custom pagination */
+.custom-pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
 }
