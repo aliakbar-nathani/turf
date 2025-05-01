@@ -1,0 +1,264 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Time Slots: {{ turf.name }}</h1>
+        <a href="{{ url_for('owner.turfs') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Turfs
+        </a>
+    </div>
+    
+    <div class="row">
+        <!-- Add Time Slot Form -->
+        <div class="col-md-4">
+            <div class="card sticky-top" style="top: 80px;">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Add New Time Slot</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.day_of_week.label(class="form-label") }}
+                            {% if form.day_of_week.errors %}
+                                {{ form.day_of_week(class="form-select is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.day_of_week.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.day_of_week(class="form-select") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.start_time.label(class="form-label") }}
+                            {% if form.start_time.errors %}
+                                {{ form.start_time(class="form-control is-invalid", type="time") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.start_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.start_time(class="form-control", type="time") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.end_time.label(class="form-label") }}
+                            {% if form.end_time.errors %}
+                                {{ form.end_time(class="form-control is-invalid", type="time") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.end_time.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.end_time(class="form-control", type="time") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.price_adjustment.label(class="form-label") }}
+                            <div class="input-group">
+                                {% if form.price_adjustment.errors %}
+                                    {{ form.price_adjustment(class="form-control is-invalid", min="-50", max="50", step="1") }}
+                                    <span class="input-group-text">%</span>
+                                    <div class="invalid-feedback">
+                                        {% for error in form.price_adjustment.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.price_adjustment(class="form-control", min="-50", max="50", step="1") }}
+                                    <span class="input-group-text">%</span>
+                                {% endif %}
+                            </div>
+                            <small class="form-text text-muted">Use negative values for discounts, positive for premium pricing</small>
+                        </div>
+                        
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>Base Price: <strong>₹{{ turf.base_price_per_hour }}</strong>/hr</span>
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#pricingHelpModal">
+                            <i class="fas fa-question-circle"></i> Help
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Time Slots List -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-dark">
+                    <h5 class="mb-0">Current Time Slots</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="daysTab" role="tablist">
+                        {% for i, day in enumerate(days) %}
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link {% if i == 0 %}active{% endif %}" id="day-{{ i }}-tab" data-bs-toggle="tab" data-bs-target="#day-{{ i }}" type="button" role="tab" aria-controls="day-{{ i }}" aria-selected="{{ 'true' if i == 0 else 'false' }}">
+                                    {{ day }}
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="tab-content p-3" id="daysTabContent">
+                        {% for day_index, day in enumerate(days) %}
+                            <div class="tab-pane fade {% if day_index == 0 %}show active{% endif %}" id="day-{{ day_index }}" role="tabpanel" aria-labelledby="day-{{ day_index }}-tab">
+                                {% if slots_by_day[day_index] %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Start Time</th>
+                                                    <th>End Time</th>
+                                                    <th>Duration</th>
+                                                    <th>Price Adjustment</th>
+                                                    <th>Final Price</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for slot in slots_by_day[day_index] %}
+                                                    <tr>
+                                                        <td>{{ slot.start_time.strftime('%I:%M %p') }}</td>
+                                                        <td>{{ slot.end_time.strftime('%I:%M %p') }}</td>
+                                                        <td>
+                                                            {% set duration_mins = ((slot.end_time.hour * 60 + slot.end_time.minute) - (slot.start_time.hour * 60 + slot.start_time.minute)) %}
+                                                            {% if duration_mins >= 60 %}
+                                                                {{ (duration_mins // 60) }} hr 
+                                                                {% if duration_mins % 60 > 0 %}
+                                                                    {{ duration_mins % 60 }} min
+                                                                {% endif %}
+                                                            {% else %}
+                                                                {{ duration_mins }} min
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if slot.price_adjustment %}
+                                                                <span class="{{ 'text-danger' if slot.price_adjustment > 0 else 'text-success' }}">
+                                                                    {{ '+' if slot.price_adjustment > 0 else '' }}{{ slot.price_adjustment }}%
+                                                                </span>
+                                                            {% else %}
+                                                                0%
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% set adjusted_price = turf.base_price_per_hour * (1 + slot.price_adjustment/100) %}
+                                                            ₹{{ adjusted_price|round(2) }}
+                                                        </td>
+                                                        <td>
+                                                            <form action="{{ url_for('owner.delete_slot', turf_id=turf.id, slot_id=slot.id) }}" method="post" onsubmit="return confirm('Are you sure you want to delete this time slot?');">
+                                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                                    <i class="fas fa-trash"></i> Delete
+                                                                </button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-4">
+                                        <p>No time slots defined for {{ day }}.</p>
+                                        <p>Add slots to make your turf available for booking on this day.</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Time Slots Tips Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Tips for Effective Time Slot Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Create Consistent Slots</h6>
+                            <p class="small">Keep your slots consistent across days to make it easier for customers to remember and book.</p>
+                            
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Optimize Peak Hours</h6>
+                            <p class="small">Apply premium pricing for peak hours (evenings and weekends) to maximize revenue.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Offer Discounts for Off-Peak</h6>
+                            <p class="small">Use negative price adjustments to attract bookings during less busy periods.</p>
+                            
+                            <h6><i class="fas fa-lightbulb text-warning me-2"></i>Consider Maintenance Time</h6>
+                            <p class="small">Leave gaps between slots if needed for maintenance or buffer time between bookings.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pricing Help Modal -->
+<div class="modal fade" id="pricingHelpModal" tabindex="-1" aria-labelledby="pricingHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pricingHelpModalLabel">Price Adjustment Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Price adjustments let you modify the base price for specific time slots:</p>
+                <ul>
+                    <li><strong>Positive values (+):</strong> Increase the price above the base price.</li>
+                    <li><strong>Negative values (-):</strong> Decrease the price below the base price.</li>
+                    <li><strong>Zero (0):</strong> Use the exact base price.</li>
+                </ul>
+                
+                <h6>Examples:</h6>
+                <ul>
+                    <li>Base price: ₹{{ turf.base_price_per_hour }}</li>
+                    <li>+20% adjustment: ₹{{ (turf.base_price_per_hour * 1.2)|round(2) }}</li>
+                    <li>-10% adjustment: ₹{{ (turf.base_price_per_hour * 0.9)|round(2) }}</li>
+                </ul>
+                
+                <div class="alert alert-info">
+                    <strong>Tip:</strong> Use higher prices for peak hours (evenings, weekends) and lower prices for off-peak hours to maximize occupancy.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- JavaScript to enhance user experience -->
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Keep the active tab selected after form submission
+        const hash = window.location.hash;
+        if (hash) {
+            const tab = document.querySelector(`[data-bs-target="${hash}"]`);
+            if (tab) {
+                const tabInstance = new bootstrap.Tab(tab);
+                tabInstance.show();
+            }
+        }
+    });
+</script>
+{% endblock %}

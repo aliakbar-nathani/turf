@@ -1,0 +1,119 @@
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, FloatField, IntegerField, HiddenField, TimeField
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional, NumberRange
+from datetime import date
+
+from models import User, UserRole
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    remember = BooleanField('Remember Me')
+    submit = SubmitField('Login')
+
+class RegisterForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    phone_number = StringField('Phone Number', validators=[DataRequired(), Length(min=10, max=15)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Sign Up')
+    
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('Username is already taken.')
+    
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('Email is already registered.')
+
+class RegisterOwnerForm(RegisterForm):
+    submit = SubmitField('Sign Up as Turf Owner')
+
+class UserProfileForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Email()], render_kw={'readonly': True})
+    phone_number = StringField('Phone Number', validators=[DataRequired(), Length(min=10, max=15)])
+    current_password = PasswordField('Current Password')
+    new_password = PasswordField('New Password', validators=[Optional(), Length(min=6)])
+    confirm_password = PasswordField('Confirm New Password', validators=[Optional(), EqualTo('new_password')])
+    submit = SubmitField('Update Profile')
+
+class AdminProfileForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=3, max=20)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    phone_number = StringField('Phone Number', validators=[Optional(), Length(min=10, max=15)])
+    role = SelectField('Role', choices=[
+        (UserRole.USER, 'Regular User'),
+        (UserRole.OWNER, 'Turf Owner'),
+        (UserRole.ADMIN, 'Admin')
+    ], validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[Optional(), Length(min=6)])
+    confirm_password = PasswordField('Confirm New Password', validators=[Optional(), EqualTo('new_password')])
+    submit = SubmitField('Update User')
+
+class TurfForm(FlaskForm):
+    name = StringField('Turf Name', validators=[DataRequired(), Length(max=100)])
+    description = TextAreaField('Description', validators=[Optional()])
+    address = StringField('Address', validators=[DataRequired(), Length(max=200)])
+    city = StringField('City', validators=[DataRequired(), Length(max=100)])
+    state = StringField('State', validators=[DataRequired(), Length(max=100)])
+    country = StringField('Country', validators=[DataRequired(), Length(max=100)])
+    postal_code = StringField('Postal Code', validators=[DataRequired(), Length(max=20)])
+    base_price_per_hour = FloatField('Base Price per Hour', validators=[DataRequired(), NumberRange(min=1)])
+    features = StringField('Features (comma-separated)', validators=[Optional()])
+    size = StringField('Size (e.g., 5-a-side)', validators=[Optional(), Length(max=50)])
+    indoor = BooleanField('Indoor Turf')
+    image_url = StringField('Primary Image URL', validators=[Optional()])
+    submit = SubmitField('Save Turf')
+
+class TimeSlotForm(FlaskForm):
+    day_of_week = SelectField('Day of Week', choices=[
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday')
+    ], coerce=int, validators=[DataRequired()])
+    start_time = TimeField('Start Time', validators=[DataRequired()])
+    end_time = TimeField('End Time', validators=[DataRequired()])
+    price_adjustment = FloatField('Price Adjustment (%)', validators=[Optional()])
+    submit = SubmitField('Add Time Slot')
+    
+    def validate_end_time(self, end_time):
+        if self.start_time.data and end_time.data <= self.start_time.data:
+            raise ValidationError('End time must be after start time.')
+
+class BookingSearchForm(FlaskForm):
+    city = StringField('City', validators=[Optional()])
+    date = StringField('Date', validators=[Optional()])
+    min_price = FloatField('Min Price', validators=[Optional(), NumberRange(min=0)])
+    max_price = FloatField('Max Price', validators=[Optional(), NumberRange(min=0)])
+    indoor = SelectField('Type', choices=[
+        ('', 'Any'), 
+        ('True', 'Indoor'), 
+        ('False', 'Outdoor')
+    ], validators=[Optional()])
+    submit = SubmitField('Search')
+
+class BookingForm(FlaskForm):
+    booking_date = SelectField('Date', validators=[DataRequired()])
+    time_slot = SelectField('Time Slot', validators=[DataRequired()], coerce=int)
+    proposed_price = FloatField('Your Proposed Price (optional)', validators=[Optional(), NumberRange(min=0)])
+    message = TextAreaField('Message to Owner (optional)', validators=[Optional()])
+    submit = SubmitField('Book Now')
+
+class NegotiationForm(FlaskForm):
+    action = HiddenField('Action', validators=[DataRequired()])
+    proposed_price = FloatField('Your Counter Offer', validators=[Optional(), NumberRange(min=0)])
+    message = TextAreaField('Message', validators=[Optional()])
+    submit = SubmitField('Submit')
+
+class DisputeForm(FlaskForm):
+    title = StringField('Title', validators=[DataRequired(), Length(max=100)])
+    description = TextAreaField('Description', validators=[DataRequired()])
+    submit = SubmitField('Submit Dispute')

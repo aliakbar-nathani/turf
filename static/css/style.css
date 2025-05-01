@@ -1,0 +1,316 @@
+/* Main styling for Turf Booking System */
+
+/* Custom Variables */
+:root {
+  --primary-color: #27ae60;
+  --secondary-color: #2980b9;
+  --accent-color: #e74c3c;
+  --success-color: #2ecc71;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --light-color: #f8f9fa;
+  --dark-color: #343a40;
+}
+
+/* General Styling */
+body {
+  padding-top: 56px; /* For fixed navbar */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+.container {
+  max-width: 1200px;
+}
+
+/* Card Styling */
+.card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-img-top {
+  height: 200px;
+  object-fit: cover;
+}
+
+/* Button Styling */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+  background-color: #219d54;
+  border-color: #219d54;
+}
+
+.btn-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+}
+
+.btn-secondary:hover {
+  background-color: #236fa1;
+  border-color: #236fa1;
+}
+
+/* Hero Section */
+.hero {
+  background-color: var(--dark-color);
+  color: white;
+  padding: 4rem 0;
+  position: relative;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+/* Features */
+.feature-icon {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  background-color: var(--light-color);
+  color: var(--primary-color);
+}
+
+/* Turf Cards */
+.turf-card {
+  margin-bottom: 1.5rem;
+}
+
+.turf-price {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.3rem 0.7rem;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+.turf-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.turf-feature {
+  background-color: var(--light-color);
+  color: var(--dark-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+/* Booking Calendar */
+.fc .fc-event {
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.fc .selected-slot {
+  border: 2px solid var(--accent-color) !important;
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+.available-slots-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Price Negotiation */
+.negotiation-container {
+  padding: 1.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.price-slider {
+  margin: 2rem 0;
+}
+
+.price-range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+/* Negotiation Timeline */
+.negotiation-timeline {
+  position: relative;
+  padding: 1rem 0;
+}
+
+.negotiation-timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  width: 2px;
+  background-color: var(--light-color);
+}
+
+.timeline-item {
+  position: relative;
+  padding-left: 45px;
+  margin-bottom: 1.5rem;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.timeline-item.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--secondary-color);
+  z-index: 1;
+}
+
+.timeline-item.user::before {
+  background-color: var(--primary-color);
+}
+
+.timeline-item.owner::before {
+  background-color: var(--secondary-color);
+}
+
+.timeline-content {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--light-color);
+}
+
+.timeline-date {
+  font-size: 0.8rem;
+  color: var(--secondary-color);
+}
+
+/* Dashboard */
+.stats-card {
+  border-left: 4px solid var(--primary-color);
+  transition: transform 0.3s;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-card .card-title {
+  font-size: 0.9rem;
+  font-weight: normal;
+  text-transform: uppercase;
+}
+
+.stats-card .stats-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.chart-container {
+  height: 300px;
+  position: relative;
+}
+
+/* User bookings */
+.booking-item {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  transition: transform 0.2s;
+}
+
+.booking-item:hover {
+  transform: translateY(-3px);
+}
+
+.booking-status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status-confirmed {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: #27ae60;
+}
+
+.status-pending {
+  background-color: rgba(241, 196, 15, 0.2);
+  color: #f39c12;
+}
+
+.status-negotiating {
+  background-color: rgba(52, 152, 219, 0.2);
+  color: #2980b9;
+}
+
+.status-cancelled {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.status-completed {
+  background-color: rgba(149, 165, 166, 0.2);
+  color: #7f8c8d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2rem;
+  }
+  
+  .stats-card .stats-value {
+    font-size: 1.4rem;
+  }
+  
+  .chart-container {
+    height: 250px;
+  }
+  
+  .timeline-item {
+    padding-left: 35px;
+  }
+}

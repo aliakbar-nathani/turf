@@ -1,0 +1,155 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Bookings</h1>
+        <a href="{{ url_for('user.search') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i> Book New Turf
+        </a>
+    </div>
+    
+    <!-- Booking filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Bookings</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="negotiating" {% if status_filter == 'negotiating' %}selected{% endif %}>Negotiating</option>
+                        <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Bookings list -->
+    {% if bookings.items %}
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+            {% for booking in bookings.items %}
+                <div class="col">
+                    <div class="card h-100 booking-item">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ booking.turf.name }}</h5>
+                            <span class="booking-status status-{{ booking.status.lower() }}">{{ booking.status }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div><i class="fas fa-calendar-alt me-2"></i> <strong>Date:</strong> {{ booking.booking_date.strftime('%d %b %Y') }}</div>
+                                <div><i class="fas fa-clock me-2"></i> <strong>Time:</strong> {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</div>
+                                <div><i class="fas fa-map-marker-alt me-2"></i> <strong>Location:</strong> {{ booking.turf.address }}, {{ booking.turf.city }}</div>
+                                <div><i class="fas fa-rupee-sign me-2"></i> <strong>Price:</strong> {{ booking.total_price }}
+                                    {% if booking.original_price != booking.total_price %}
+                                        <span class="text-success ms-2">(Negotiated)</span>
+                                    {% endif %}
+                                </div>
+                                <div><i class="fas fa-money-bill-wave me-2"></i> <strong>Payment:</strong> 
+                                    {% if booking.payment_status == 'paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Unpaid</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex flex-wrap justify-content-between mt-3">
+                                <a href="{{ url_for('booking.view_turf', turf_id=booking.turf_id) }}" class="btn btn-sm btn-outline-primary mb-2">
+                                    <i class="fas fa-eye me-1"></i> View Turf
+                                </a>
+                                
+                                {% if booking.status == 'negotiating' %}
+                                    <a href="{{ url_for('booking.negotiate', booking_id=booking.id) }}" class="btn btn-sm btn-warning mb-2">
+                                        <i class="fas fa-comments-dollar me-1"></i> Negotiate
+                                    </a>
+                                {% elif booking.status == 'confirmed' and booking.payment_status != 'paid' %}
+                                    <a href="{{ url_for('payment.checkout', booking_id=booking.id) }}" class="btn btn-sm btn-success mb-2">
+                                        <i class="fas fa-credit-card me-1"></i> Pay Now
+                                    </a>
+                                {% endif %}
+                                
+                                {% if booking.status == 'confirmed' %}
+                                    <form action="{{ url_for('booking.cancel_booking', booking_id=booking.id) }}" method="post" onsubmit="return confirmAction('Are you sure you want to cancel this booking?')">
+                                        <button type="submit" class="btn btn-sm btn-danger mb-2">
+                                            <i class="fas fa-times me-1"></i> Cancel
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                
+                                {% if booking.status == 'completed' or booking.status == 'confirmed' %}
+                                    <a href="{{ url_for('booking.create_dispute', booking_id=booking.id) }}" class="btn btn-sm btn-outline-secondary mb-2">
+                                        <i class="fas fa-flag me-1"></i> Report Issue
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>Booked on {{ booking.created_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if bookings.pages > 1 %}
+            <nav aria-label="Bookings pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if bookings.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('user.bookings', status=status_filter, page=bookings.prev_num) }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in bookings.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == bookings.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('user.bookings', status=status_filter, page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if bookings.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('user.bookings', status=status_filter, page=bookings.next_num) }}">Next</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-calendar-times fa-5x text-muted"></i>
+            </div>
+            <h3>No bookings found</h3>
+            <p class="text-muted">You don't have any bookings with the selected filter.</p>
+            <a href="{{ url_for('user.search') }}" class="btn btn-primary mt-3">Find a Turf to Book</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

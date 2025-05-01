@@ -1,0 +1,258 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Bookings</h1>
+        <a href="{{ url_for('owner.dashboard') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Booking filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-5">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Bookings</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="negotiating" {% if status_filter == 'negotiating' %}selected{% endif %}>Negotiating</option>
+                        <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label for="turf_id" class="form-label">Filter by Turf</label>
+                    <select name="turf_id" id="turf_id" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if turf_id == 'all' %}selected{% endif %}>All Turfs</option>
+                        {% for t in turfs %}
+                            <option value="{{ t.id }}" {% if turf_id|int == t.id %}selected{% endif %}>{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Bookings list -->
+    {% if bookings.items %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Turf</th>
+                                <th>User</th>
+                                <th>Date & Time</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for booking in bookings.items %}
+                                <tr>
+                                    <td>{{ booking.id }}</td>
+                                    <td>{{ booking.turf.name }}</td>
+                                    <td>{{ booking.user.username }}</td>
+                                    <td>
+                                        {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                        <small class="text-muted">{{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</small>
+                                    </td>
+                                    <td>
+                                        ₹{{ booking.total_price }}
+                                        {% if booking.total_price != booking.original_price %}
+                                            <br><small class="text-warning">(Negotiated)</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="booking-status status-{{ booking.status.lower() }}">
+                                            {{ booking.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if booking.payment_status == 'paid' else 'warning text-dark' }}">
+                                            {{ booking.payment_status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if booking.status in ['pending', 'negotiating'] %}
+                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#respondModal{{ booking.id }}">
+                                                Respond
+                                            </button>
+                                            
+                                            <!-- Respond Modal -->
+                                            <div class="modal fade" id="respondModal{{ booking.id }}" tabindex="-1" aria-labelledby="respondModalLabel{{ booking.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="respondModalLabel{{ booking.id }}">Respond to Booking</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <strong>Booking Details:</strong><br>
+                                                                Turf: {{ booking.turf.name }}<br>
+                                                                Date: {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                                                Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}<br>
+                                                                User: {{ booking.user.username }}
+                                                            </div>
+                                                            
+                                                            <div class="mb-3">
+                                                                <strong>Pricing:</strong><br>
+                                                                Original Price: ₹{{ booking.original_price }}<br>
+                                                                {% if booking.user_proposed_price %}
+                                                                    User Proposed: ₹{{ booking.user_proposed_price }}<br>
+                                                                {% endif %}
+                                                                Current Price: ₹{{ booking.total_price }}
+                                                            </div>
+                                                            
+                                                            <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
+                                                                <div class="mb-3">
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input" type="radio" name="action" id="accept{{ booking.id }}" value="accept" checked>
+                                                                        <label class="form-check-label" for="accept{{ booking.id }}">
+                                                                            Accept at current price (₹{{ booking.total_price }})
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input" type="radio" name="action" id="reject{{ booking.id }}" value="reject">
+                                                                        <label class="form-check-label" for="reject{{ booking.id }}">
+                                                                            Reject booking
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="form-check">
+                                                                        <input class="form-check-input" type="radio" name="action" id="counter{{ booking.id }}" value="counter">
+                                                                        <label class="form-check-label" for="counter{{ booking.id }}">
+                                                                            Make counter offer
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="mb-3 counter-price-container" style="display: none;">
+                                                                    <label for="counter_price{{ booking.id }}" class="form-label">Your Counter Price</label>
+                                                                    <div class="input-group">
+                                                                        <span class="input-group-text">₹</span>
+                                                                        <input type="number" class="form-control" id="counter_price{{ booking.id }}" name="counter_price" min="{{ booking.original_price * 0.7 }}" max="{{ booking.original_price * 1.2 }}" step="0.01" value="{{ booking.original_price }}">
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="mb-3 counter-message-container" style="display: none;">
+                                                                    <label for="message{{ booking.id }}" class="form-label">Message to User</label>
+                                                                    <textarea class="form-control" id="message{{ booking.id }}" name="message" rows="2" placeholder="Optional message explaining your decision"></textarea>
+                                                                </div>
+                                                                
+                                                                <div class="text-end">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="submit" class="btn btn-primary">Submit Response</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% else %}
+                                            <a href="{{ url_for('booking.view_turf', turf_id=booking.turf_id) }}" class="btn btn-sm btn-outline-secondary">View Turf</a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if bookings.pages > 1 %}
+            <nav aria-label="Bookings pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if bookings.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('owner.bookings', status=status_filter, turf_id=turf_id, page=bookings.prev_num) }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in bookings.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == bookings.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('owner.bookings', status=status_filter, turf_id=turf_id, page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if bookings.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('owner.bookings', status=status_filter, turf_id=turf_id, page=bookings.next_num) }}">Next</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-calendar-times fa-5x text-muted"></i>
+            </div>
+            <h3>No bookings found</h3>
+            <p class="text-muted">There are no bookings matching your filters.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript for respond modal -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle radio buttons to show/hide counter price input
+        const radioButtons = document.querySelectorAll('input[type=radio][name=action]');
+        radioButtons.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                const modalId = this.id.replace('accept', '').replace('reject', '').replace('counter', '');
+                const counterPriceContainer = document.querySelector('.counter-price-container');
+                const counterMessageContainer = document.querySelector('.counter-message-container');
+                
+                if (this.value === 'counter') {
+                    counterPriceContainer.style.display = 'block';
+                    counterMessageContainer.style.display = 'block';
+                } else {
+                    counterPriceContainer.style.display = 'none';
+                    if (this.value === 'reject') {
+                        counterMessageContainer.style.display = 'block';
+                    } else {
+                        counterMessageContainer.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

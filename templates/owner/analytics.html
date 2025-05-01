@@ -1,0 +1,288 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Turf Analytics</h1>
+        <a href="{{ url_for('owner.dashboard') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Turf Selector -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h5 class="mb-0">Select Turf:</h5>
+                </div>
+                <div class="col-md-8">
+                    <select id="turf-select" class="form-select">
+                        {% for turf in turfs %}
+                            <option value="{{ turf.id }}" {% if selected_turf.id == turf.id %}selected{% endif %}>{{ turf.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Monthly Revenue</h6>
+                    <p class="stats-value mb-0">₹{{ monthly_revenue }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #f39c12;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Bookings</h6>
+                    <p class="stats-value mb-0">{{ total_bookings }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #e74c3c;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Recent Bookings (30d)</h6>
+                    <p class="stats-value mb-0">{{ recent_bookings }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #2ecc71;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Avg. Negotiation</h6>
+                    <p class="stats-value mb-0">{{ avg_negotiation_percentage }}%</p>
+                    <small class="text-muted">of original price</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Booking Trend (Last 90 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="bookings-trend"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Weekly Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="weekly-distribution"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Booking Performance & Pricing Analysis -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Booking Performance</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <td>Average Bookings Per Week</td>
+                                <td class="text-end">{{ (recent_bookings / 4.3)|round(1) }}</td>
+                            </tr>
+                            <tr>
+                                <td>Booking Rate</td>
+                                <td class="text-end">
+                                    {% if recent_bookings > 0 %}
+                                        <div class="progress" style="height: 20px;">
+                                            {% set booking_rate = (recent_bookings / (recent_bookings + 5) * 100)|round %}
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ booking_rate }}%;" aria-valuenow="{{ booking_rate }}" aria-valuemin="0" aria-valuemax="100">{{ booking_rate }}%</div>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">No data</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Most Popular Day</td>
+                                <td class="text-end">
+                                    {% if chart_data %}
+                                        {% set max_index = chart_data.weekly_data.index(max(chart_data.weekly_data)) %}
+                                        {{ chart_data.weekly_labels[max_index] }}
+                                    {% else %}
+                                        <span class="text-muted">No data</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Price Negotiations</td>
+                                <td class="text-end">{{ negotiation_count }} ({{ avg_negotiation_percentage }}% avg)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Pricing Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <p>Current base price: <strong>₹{{ selected_turf.base_price_per_hour }}</strong> per hour</p>
+                    
+                    <div class="mb-3">
+                        <h6>Price Negotiation Statistics</h6>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="me-3" style="width: 120px;">Negotiations:</div>
+                            <div class="progress flex-grow-1" style="height: 20px;">
+                                {% set negotiation_percent = (negotiation_count / total_bookings * 100)|round if total_bookings else 0 %}
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ negotiation_percent }}%;" aria-valuenow="{{ negotiation_percent }}" aria-valuemin="0" aria-valuemax="100">{{ negotiation_percent }}%</div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="me-3" style="width: 120px;">Avg. Price:</div>
+                            <div class="progress flex-grow-1" style="height: 20px;">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ avg_negotiation_percentage }}%;" aria-valuenow="{{ avg_negotiation_percentage }}" aria-valuemin="0" aria-valuemax="100">{{ avg_negotiation_percentage }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6>Pricing Recommendations</h6>
+                        <ul class="mb-0">
+                            {% if avg_negotiation_percentage < 85 %}
+                                <li>Consider lowering your base price to reflect market demand</li>
+                            {% elif avg_negotiation_percentage > 95 %}
+                                <li>Your pricing is competitive, you may have room to increase</li>
+                            {% else %}
+                                <li>Your pricing appears to be well-balanced</li>
+                            {% endif %}
+                            
+                            {% if negotiation_count > total_bookings * 0.7 %}
+                                <li>High negotiation rate - revisit your pricing strategy</li>
+                            {% endif %}
+                            
+                            {% set max_index = chart_data.weekly_data.index(max(chart_data.weekly_data)) if chart_data else 0 %}
+                            {% set min_index = chart_data.weekly_data.index(min(chart_data.weekly_data)) if chart_data and chart_data.weekly_data else 0 %}
+                            {% if chart_data and chart_data.weekly_data %}
+                                <li>Consider dynamic pricing: higher for {{ chart_data.weekly_labels[max_index] }}, lower for {{ chart_data.weekly_labels[min_index] }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load chart data from server
+        const chartData = {{ chart_data|safe }};
+        
+        // Render bookings trend chart
+        const trendCtx = document.getElementById('bookings-trend').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.dates,
+                datasets: [{
+                    label: 'Bookings',
+                    data: chartData.counts,
+                    borderColor: '#27ae60',
+                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Render weekly distribution chart
+        const weeklyCtx = document.getElementById('weekly-distribution').getContext('2d');
+        new Chart(weeklyCtx, {
+            type: 'bar',
+            data: {
+                labels: chartData.weekly_labels,
+                datasets: [{
+                    label: 'Bookings',
+                    data: chartData.weekly_data,
+                    backgroundColor: [
+                        'rgba(52, 152, 219, 0.7)',
+                        'rgba(46, 204, 113, 0.7)',
+                        'rgba(155, 89, 182, 0.7)',
+                        'rgba(230, 126, 34, 0.7)',
+                        'rgba(241, 196, 15, 0.7)',
+                        'rgba(231, 76, 60, 0.7)',
+                        'rgba(149, 165, 166, 0.7)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Handle turf selection change
+        const turfSelect = document.getElementById('turf-select');
+        if (turfSelect) {
+            turfSelect.addEventListener('change', function() {
+                window.location.href = '/owner/analytics?turf_id=' + this.value;
+            });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

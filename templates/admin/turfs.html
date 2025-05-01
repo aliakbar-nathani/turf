@@ -1,0 +1,260 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Turfs</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Turf filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="active" class="form-label">Filter by Status</label>
+                    <select name="active" id="active" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if active_filter == 'all' %}selected{% endif %}>All Turfs</option>
+                        <option value="true" {% if active_filter == 'true' %}selected{% endif %}>Active Turfs</option>
+                        <option value="false" {% if active_filter == 'false' %}selected{% endif %}>Inactive Turfs</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="city" class="form-label">Filter by City</label>
+                    <select name="city" id="city" class="form-select" onchange="this.form.submit()">
+                        <option value="all">All Cities</option>
+                        <!-- Cities would be dynamically populated from the database -->
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Bangalore">Bangalore</option>
+                        <option value="Chennai">Chennai</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Search by name or location" value="{{ request.args.get('search', '') }}">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Turfs list -->
+    {% if turfs.items %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Location</th>
+                                <th>Owner</th>
+                                <th>Price/hr</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for turf in turfs.items %}
+                                <tr>
+                                    <td>{{ turf.id }}</td>
+                                    <td>{{ turf.name }}</td>
+                                    <td>{{ turf.city }}, {{ turf.state }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin.edit_user', user_id=turf.owner_id) }}">
+                                            {{ turf.owner.username }}
+                                        </a>
+                                    </td>
+                                    <td>₹{{ turf.base_price_per_hour }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'info' if turf.indoor else 'success' }}">
+                                            {{ 'Indoor' if turf.indoor else 'Outdoor' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if turf.active else 'danger' }}">
+                                            {{ 'Active' if turf.active else 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('booking.view_turf', turf_id=turf.id) }}" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <span class="visually-hidden">Toggle Dropdown</span>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <form action="{{ url_for('admin.toggle_turf', turf_id=turf.id) }}" method="post">
+                                                        <button type="submit" class="dropdown-item">
+                                                            {% if turf.active %}
+                                                                <i class="fas fa-ban text-danger me-2"></i> Deactivate
+                                                            {% else %}
+                                                                <i class="fas fa-check text-success me-2"></i> Activate
+                                                            {% endif %}
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li><a class="dropdown-item" href="{{ url_for('owner.bookings') }}?turf_id={{ turf.id }}"><i class="fas fa-calendar-alt me-2"></i> View Bookings</a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if turfs.pages > 1 %}
+            <nav aria-label="Turfs pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if turfs.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.turfs', active=active_filter, search=request.args.get('search', ''), page=turfs.prev_num) }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in turfs.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == turfs.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.turfs', active=active_filter, search=request.args.get('search', ''), page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if turfs.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.turfs', active=active_filter, search=request.args.get('search', ''), page=turfs.next_num) }}">Next</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-building fa-5x text-muted"></i>
+            </div>
+            <h3>No turfs found</h3>
+            <p class="text-muted">No turfs match the current filter criteria.</p>
+        </div>
+    {% endif %}
+    
+    <!-- Turf Stats -->
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Turf Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>Total Turfs</td>
+                                    <td class="text-end">{{ turfs.total }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Active Turfs</td>
+                                    <td class="text-end">
+                                        {% set active_count = turfs.items|selectattr('active', 'equalto', True)|list|length %}
+                                        {{ active_count }}
+                                        ({{ (active_count / turfs.items|length * 100)|round|int if turfs.items|length else 0 }}%)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Indoor Turfs</td>
+                                    <td class="text-end">
+                                        {% set indoor_count = turfs.items|selectattr('indoor', 'equalto', True)|list|length %}
+                                        {{ indoor_count }}
+                                        ({{ (indoor_count / turfs.items|length * 100)|round|int if turfs.items|length else 0 }}%)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Avg. Price/Hour</td>
+                                    <td class="text-end">
+                                        {% if turfs.items %}
+                                            {% set total_price = 0 %}
+                                            {% for turf in turfs.items %}
+                                                {% set total_price = total_price + turf.base_price_per_hour %}
+                                            {% endfor %}
+                                            ₹{{ (total_price / turfs.items|length)|round(2) }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Quality Control</h5>
+                </div>
+                <div class="card-body">
+                    <p>As an admin, you can ensure that all listed turfs meet quality standards:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-check-circle text-success me-2"></i>Verify Turf Information</h6>
+                                <p class="small">Ensure turf details are accurate including location, size, and features.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-check-circle text-success me-2"></i>Monitor Pricing</h6>
+                                <p class="small">Check that turf prices are reasonable and competitive for the market.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-check-circle text-success me-2"></i>Review User Feedback</h6>
+                                <p class="small">Address user complaints and ensure turf owners maintain quality.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-check-circle text-success me-2"></i>Deactivate Problematic Turfs</h6>
+                                <p class="small">Temporarily disable turfs with ongoing issues or maintenance.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-4">Owner Dashboard</h1>
+            <p class="lead">Manage your turfs, bookings, and track your performance.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('owner.turfs') }}" class="btn btn-primary me-2">
+                <i class="fas fa-building me-2"></i>My Turfs
+            </a>
+            <a href="{{ url_for('owner.new_turf') }}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Add New Turf
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card h-100">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Total Turfs</h6>
+                    <p class="stats-value mb-0">{{ turfs_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #f39c12;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Today's Bookings</h6>
+                    <p class="stats-value mb-0">{{ today_bookings }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #e74c3c;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Pending Bookings</h6>
+                    <p class="stats-value mb-0">{{ pending_bookings }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card h-100" style="border-left-color: #2ecc71;">
+                <div class="card-body">
+                    <h6 class="card-title text-muted">Revenue (Last 30 Days)</h6>
+                    <p class="stats-value mb-0">₹{{ recent_revenue }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Recent Bookings -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Bookings</h5>
+                    <a href="{{ url_for('owner.bookings') }}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Turf</th>
+                                        <th>User</th>
+                                        <th>Date</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for booking in recent_bookings %}
+                                        <tr>
+                                            <td>{{ booking.turf.name }}</td>
+                                            <td>{{ booking.user.username }}</td>
+                                            <td>{{ booking.booking_date.strftime('%d %b') }}</td>
+                                            <td>₹{{ booking.total_price }}</td>
+                                            <td>
+                                                <span class="booking-status status-{{ booking.status.lower() }}">
+                                                    {{ booking.status }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if booking.status in ['pending', 'negotiating'] %}
+                                                    <a href="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary">Respond</a>
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>No recent bookings found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Most Popular Turfs -->
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Most Popular Turfs</h5>
+                </div>
+                <div class="card-body">
+                    {% if popular_turfs %}
+                        <div class="list-group">
+                            {% for turf, count in popular_turfs %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">{{ turf.name }}</h6>
+                                            <small class="text-muted">{{ turf.city }}, {{ turf.state }}</small>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill">{{ count }} bookings</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('owner.analytics') }}" class="btn btn-sm btn-outline-primary">View Detailed Analytics</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>No booking data available yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Revenue Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="revenue-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Actions -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('owner.new_turf') }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i> Add New Turf
+                        </a>
+                        <a href="{{ url_for('owner.bookings', status='pending') }}" class="btn btn-warning">
+                            <i class="fas fa-hourglass-half me-2"></i> Manage Pending Bookings
+                        </a>
+                        <a href="{{ url_for('owner.analytics') }}" class="btn btn-info">
+                            <i class="fas fa-chart-bar me-2"></i> View Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tips and Recommendations -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Tips to Boost Your Bookings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-camera text-primary me-2"></i> Add High-Quality Photos</h6>
+                                <p class="small">Listings with good photos get 2x more bookings. Make sure your turf looks its best!</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-tag text-primary me-2"></i> Optimize Your Pricing</h6>
+                                <p class="small">Set competitive rates and be open to negotiation during off-peak hours.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-clock text-primary me-2"></i> Update Availability</h6>
+                                <p class="small">Keep your availability calendar up-to-date to avoid conflicts and cancellations.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-star text-primary me-2"></i> Respond Quickly</h6>
+                                <p class="small">Fast responses to booking requests and negotiations lead to more confirmations.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

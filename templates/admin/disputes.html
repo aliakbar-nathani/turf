@@ -1,0 +1,248 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Manage Disputes</h1>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Dispute filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Disputes</option>
+                        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Open</option>
+                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Resolved</option>
+                        <option value="closed" {% if status_filter == 'closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Search by title or description" value="{{ request.args.get('search', '') }}">
+                        <button class="btn btn-primary" type="submit">Search</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Disputes list -->
+    {% if disputes.items %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>User</th>
+                                <th>Booking</th>
+                                <th>Created</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dispute in disputes.items %}
+                                <tr>
+                                    <td>{{ dispute.id }}</td>
+                                    <td>{{ dispute.title }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin.edit_user', user_id=dispute.user_id) }}">
+                                            {{ dispute.user.username }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="small">Booking #{{ dispute.booking_id }}</span><br>
+                                        <small class="text-muted">{{ dispute.booking.turf.name }}</small>
+                                    </td>
+                                    <td>{{ dispute.created_at.strftime('%d %b %Y') }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if dispute.status == 'open' else 'warning' if dispute.status == 'in_progress' else 'success' if dispute.status == 'resolved' else 'secondary' }}">
+                                            {{ dispute.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('admin.resolve_dispute', dispute_id=dispute.id) }}" class="btn btn-sm btn-primary">
+                                            {% if dispute.status == 'open' %}
+                                                Resolve
+                                            {% else %}
+                                                View
+                                            {% endif %}
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pagination -->
+        {% if disputes.pages > 1 %}
+            <nav aria-label="Disputes pagination" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if disputes.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.disputes', status=status_filter, search=request.args.get('search', ''), page=disputes.prev_num) }}">Previous</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in disputes.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == disputes.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('admin.disputes', status=status_filter, search=request.args.get('search', ''), page=page_num) }}">{{ page_num }}</a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if disputes.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('admin.disputes', status=status_filter, search=request.args.get('search', ''), page=disputes.next_num) }}">Next</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-check-circle fa-5x text-success"></i>
+            </div>
+            <h3>No disputes found</h3>
+            <p class="text-muted">
+                {% if status_filter == 'open' %}
+                    There are no open disputes at this time. Great job!
+                {% else %}
+                    No disputes match the current filter criteria.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+    
+    <!-- Dispute Stats -->
+    <div class="row mt-5">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Dispute Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>Total Disputes</td>
+                                    <td class="text-end">{{ disputes.total }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Open Disputes</td>
+                                    <td class="text-end">
+                                        {% set open_count = disputes.items|selectattr('status', 'equalto', 'open')|list|length %}
+                                        {{ open_count }}
+                                        <span class="text-danger">
+                                            ({{ (open_count / disputes.items|length * 100)|round|int if disputes.items|length else 0 }}%)
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Resolved Disputes</td>
+                                    <td class="text-end">
+                                        {% set resolved_count = disputes.items|selectattr('status', 'equalto', 'resolved')|list|length %}
+                                        {{ resolved_count }}
+                                        <span class="text-success">
+                                            ({{ (resolved_count / disputes.items|length * 100)|round|int if disputes.items|length else 0 }}%)
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Avg. Resolution Time</td>
+                                    <td class="text-end">
+                                        {% if disputes.items %}
+                                            {% set resolved_disputes = disputes.items|selectattr('status', 'equalto', 'resolved')|selectattr('resolved_at', 'defined')|list %}
+                                            {% if resolved_disputes %}
+                                                {% set total_hours = 0 %}
+                                                {% for dispute in resolved_disputes %}
+                                                    {% set diff = (dispute.resolved_at - dispute.created_at).total_seconds() / 3600 %}
+                                                    {% set total_hours = total_hours + diff %}
+                                                {% endfor %}
+                                                {{ (total_hours / resolved_disputes|length)|round(1) }} hours
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Dispute Resolution Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-balance-scale text-warning me-2"></i>Be Fair and Impartial</h6>
+                                <p class="small">Review evidence from both the user and turf owner before making a decision.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-comments text-warning me-2"></i>Communicate Clearly</h6>
+                                <p class="small">Provide clear explanations for your resolution decisions to all parties.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6><i class="fas fa-tachometer-alt text-warning me-2"></i>Prioritize Critical Issues</h6>
+                                <p class="small">Resolve payment disputes and safety concerns first, followed by general complaints.</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6><i class="fas fa-chart-line text-warning me-2"></i>Track Patterns</h6>
+                                <p class="small">Monitor repeat offenders (both users and turf owners) who generate multiple disputes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

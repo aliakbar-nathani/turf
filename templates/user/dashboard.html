@@ -1,0 +1,203 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-4">Welcome, {{ current_user.username }}!</h1>
+            <p class="lead">Find, book, and play at the best turfs around you.</p>
+            <a href="{{ url_for('user.search') }}" class="btn btn-primary">Find a Turf</a>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Search</h5>
+                    <form action="{{ url_for('user.search') }}" method="get">
+                        <div class="mb-3">
+                            <label for="city" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="city" name="city" placeholder="Enter city">
+                        </div>
+                        <div class="mb-3">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="date" name="date" min="{{ today }}">
+                        </div>
+                        <button type="submit" class="btn btn-light w-100">Search</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Bookings -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Bookings</h5>
+                    <a href="{{ url_for('user.bookings') }}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_bookings %}
+                        <div class="row g-3">
+                            {% for booking in upcoming_bookings %}
+                                <div class="col-md-6">
+                                    <div class="card h-100 booking-item">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between">
+                                                <h5 class="card-title">{{ booking.turf.name }}</h5>
+                                                <span class="badge bg-success">{{ booking.booking_date.strftime('%d %b %Y') }}</span>
+                                            </div>
+                                            <p class="card-text">
+                                                <i class="fas fa-clock me-2"></i> {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}<br>
+                                                <i class="fas fa-map-marker-alt me-2"></i> {{ booking.turf.address }}, {{ booking.turf.city }}<br>
+                                                <i class="fas fa-rupee-sign me-2"></i> {{ booking.total_price }}
+                                            </p>
+                                            <div class="d-flex justify-content-end">
+                                                <a href="{{ url_for('booking.view_turf', turf_id=booking.turf.id) }}" class="btn btn-sm btn-outline-primary me-2">View Turf</a>
+                                                <form action="{{ url_for('booking.cancel_booking', booking_id=booking.id) }}" method="post" onsubmit="return confirmAction('Are you sure you want to cancel this booking?')">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>You don't have any upcoming bookings.</p>
+                            <a href="{{ url_for('user.search') }}" class="btn btn-primary">Find a Turf to Book</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Recently Played Turfs -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Recently Played Turfs</h5>
+                </div>
+                <div class="card-body">
+                    {% if played_turfs %}
+                        <div class="row g-3">
+                            {% for turf in played_turfs %}
+                                <div class="col-12">
+                                    <div class="card h-100 turf-card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ turf.name }}</h5>
+                                            <p class="card-text">
+                                                <i class="fas fa-map-marker-alt me-2"></i> {{ turf.address }}, {{ turf.city }}<br>
+                                                <i class="fas fa-rupee-sign me-2"></i> {{ turf.base_price_per_hour }} per hour
+                                            </p>
+                                            <a href="{{ url_for('booking.view_turf', turf_id=turf.id) }}" class="btn btn-sm btn-primary">Book Again</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>You haven't played at any turfs yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommended Turfs -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Recommended Turfs</h5>
+                </div>
+                <div class="card-body">
+                    {% if recommended_turfs %}
+                        <div class="row g-3">
+                            {% for turf in recommended_turfs %}
+                                <div class="col-12">
+                                    <div class="card h-100 turf-card">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ turf.name }}</h5>
+                                            <p class="card-text">
+                                                <i class="fas fa-map-marker-alt me-2"></i> {{ turf.address }}, {{ turf.city }}<br>
+                                                <i class="fas fa-rupee-sign me-2"></i> {{ turf.base_price_per_hour }} per hour<br>
+                                                {% if turf.indoor %}
+                                                    <span class="badge bg-info">Indoor</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">Outdoor</span>
+                                                {% endif %}
+                                                {% if turf.size %}
+                                                    <span class="badge bg-secondary">{{ turf.size }}</span>
+                                                {% endif %}
+                                            </p>
+                                            <a href="{{ url_for('booking.view_turf', turf_id=turf.id) }}" class="btn btn-sm btn-primary">View Turf</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>No recommended turfs available at the moment.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Booking History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Booking History</h5>
+                    <a href="{{ url_for('user.bookings') }}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_bookings %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Turf</th>
+                                        <th>Date</th>
+                                        <th>Time</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for booking in recent_bookings %}
+                                        <tr>
+                                            <td>{{ booking.turf.name }}</td>
+                                            <td>{{ booking.booking_date.strftime('%d %b %Y') }}</td>
+                                            <td>{{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</td>
+                                            <td>₹{{ booking.total_price }}</td>
+                                            <td>
+                                                <span class="booking-status status-{{ booking.status.lower() }}">
+                                                    {{ booking.status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p>You don't have any booking history yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

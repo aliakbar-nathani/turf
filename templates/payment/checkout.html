@@ -1,0 +1,165 @@
+{% extends "layout.html" %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Complete Your Booking</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Booking Summary</h5>
+                            <div class="mb-3">
+                                <strong>Turf:</strong> {{ turf.name }}<br>
+                                <strong>Date:</strong> {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                <strong>Time:</strong> {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}<br>
+                                <strong>Location:</strong> {{ turf.address }}, {{ turf.city }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Price Details</h5>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Base Price:</span>
+                                        <strong>₹{{ booking.original_price }}</strong>
+                                    </div>
+                                    {% if booking.original_price != booking.total_price %}
+                                        <div class="d-flex justify-content-between mb-2 text-success">
+                                            <span>Negotiated Discount:</span>
+                                            <strong>-₹{{ booking.original_price - booking.total_price }}</strong>
+                                        </div>
+                                    {% endif %}
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Total Amount:</span>
+                                        <strong class="h5 text-primary mb-0">₹{{ booking.total_price }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Booking Details</h5>
+                        <ul class="list-group mb-3">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="my-0">{{ turf.name }}</h6>
+                                    <small class="text-muted">{{ booking.booking_date.strftime('%d %b %Y') }}, {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</small>
+                                </div>
+                                <span class="text-primary">₹{{ booking.total_price }}</span>
+                            </li>
+                            {% if turf.features %}
+                                <li class="list-group-item">
+                                    <small class="text-muted">Features: {{ turf.features }}</small>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Payment Information</h5>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i> You will be redirected to our secure payment gateway to complete your payment.
+                        </div>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-grow-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="paymentMethod" id="card" checked>
+                                    <label class="form-check-label" for="card">
+                                        <i class="fas fa-credit-card me-2"></i> Credit/Debit Card
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <img src="https://cdn.jsdelivr.net/gh/srdjanpetrovic/creditcard-logos/logos/visa.svg" alt="Visa" height="30">
+                                <img src="https://cdn.jsdelivr.net/gh/srdjanpetrovic/creditcard-logos/logos/mastercard.svg" alt="Mastercard" height="30">
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-success">
+                            <strong>Secure Payment:</strong> Your payment information is processed securely through Stripe. We do not store your card details.
+                        </div>
+                    </div>
+                    
+                    <form action="{{ url_for('payment.create_checkout_session', booking_id=booking.id) }}" method="post">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="terms" required>
+                            <label class="form-check-label" for="terms">
+                                I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a> and <a href="#" data-bs-toggle="modal" data-bs-target="#cancellationModal">Cancellation Policy</a>
+                            </label>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('user.bookings') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Bookings
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="checkout-button">
+                                <i class="fas fa-lock me-2"></i>Proceed to Pay ₹{{ booking.total_price }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Terms Modal -->
+<div class="modal fade" id="termsModal" tabindex="-1" aria-labelledby="termsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="termsModalLabel">Terms and Conditions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Booking Terms</h6>
+                <p>By confirming this booking, you agree to the following terms:</p>
+                <ul>
+                    <li>You must arrive at the turf at least 15 minutes before your booking time.</li>
+                    <li>The turf must be vacated promptly at the end of your booking time.</li>
+                    <li>Any damage to turf facilities or equipment will be charged to your account.</li>
+                    <li>The turf owner reserves the right to refuse access in case of inappropriate behavior.</li>
+                    <li>You are responsible for the safety and behavior of all participants in your group.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Agree</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancellation Modal -->
+<div class="modal fade" id="cancellationModal" tabindex="-1" aria-labelledby="cancellationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancellationModalLabel">Cancellation Policy</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Cancellation Terms</h6>
+                <p>Please note our cancellation policy:</p>
+                <ul>
+                    <li>Full refund if cancelled more than 24 hours before booking time.</li>
+                    <li>50% refund if cancelled between 12-24 hours before booking time.</li>
+                    <li>No refund for cancellations less than 12 hours before booking time.</li>
+                    <li>Rescheduling is subject to availability and must be done at least 24 hours in advance.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Agree</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

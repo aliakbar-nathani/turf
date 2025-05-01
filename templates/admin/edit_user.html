@@ -1,0 +1,214 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Edit User: {{ user.username }}</h4>
+                    <span class="badge bg-light text-dark">ID: {{ user.id }}</span>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.username.label(class="form-label") }}
+                                {% if form.username.errors %}
+                                    {{ form.username(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.username.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.username(class="form-control") }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.email.label(class="form-label") }}
+                                {% if form.email.errors %}
+                                    {{ form.email(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.email.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.email(class="form-control") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.phone_number.label(class="form-label") }}
+                                {% if form.phone_number.errors %}
+                                    {{ form.phone_number(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.phone_number.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.phone_number(class="form-control") }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.role.label(class="form-label") }}
+                                {% if form.role.errors %}
+                                    {{ form.role(class="form-select is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.role.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.role(class="form-select") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> Change Password</h6>
+                            <p class="mb-0">Leave the fields below empty if you don't want to change the user's password.</p>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.new_password.label(class="form-label") }}
+                                {% if form.new_password.errors %}
+                                    {{ form.new_password(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.new_password.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.new_password(class="form-control") }}
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.confirm_password.label(class="form-label") }}
+                                {% if form.confirm_password.errors %}
+                                    {{ form.confirm_password(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.confirm_password.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.confirm_password(class="form-control") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Users
+                            </a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- User Details Cards -->
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Account Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Member Since</h6>
+                                        <span>{{ user.created_at.strftime('%d %b %Y') }}</span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Account Type</h6>
+                                        <span class="badge bg-{{ 'primary' if user.role == 'user' else 'info' if user.role == 'owner' else 'danger' }}">
+                                            {{ user.role }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Email Verified</h6>
+                                        <span class="badge bg-success">Yes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Activity Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Total Bookings</h6>
+                                        <span>{{ user.bookings.count() }}</span>
+                                    </div>
+                                </div>
+                                {% if user.is_owner() %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">Turfs Managed</h6>
+                                            <span>{{ user.turfs.count() }}</span>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">Last Activity</h6>
+                                        <span>{{ user.created_at.strftime('%d %b %Y') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Actions -->
+            <div class="card mt-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Admin Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> These actions can't be undone! Use with caution.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-warning w-100 mb-2" onclick="alert('This feature is not implemented in the demo.'); return false;">
+                                <i class="fas fa-user-lock me-2"></i> Temporarily Suspend User
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="alert('This feature is not implemented in the demo.'); return false;">
+                                <i class="fas fa-user-times me-2"></i> Delete User Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

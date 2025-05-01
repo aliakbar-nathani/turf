@@ -1,0 +1,154 @@
+{% extends "layout.html" %}
+
+{% block title %}Find a Turf{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 mx-auto text-center hero-content">
+                <h1 class="mb-4">Find Your Perfect Turf</h1>
+                <p class="lead mb-4">Search for available turfs, check real-time availability, and book instantly.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <!-- Search Form -->
+    <div class="card mb-5">
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('user.search') }}" class="row g-3">
+                {{ form.hidden_tag() }}
+                <div class="col-md-4">
+                    {{ form.city.label(class="form-label") }}
+                    {{ form.city(class="form-control", placeholder="Enter city name") }}
+                </div>
+                <div class="col-md-3">
+                    {{ form.date.label(class="form-label") }}
+                    {{ form.date(class="form-control date-picker", placeholder="Select date") }}
+                </div>
+                <div class="col-md-2">
+                    {{ form.indoor.label(class="form-label") }}
+                    {{ form.indoor(class="form-select") }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Price Range</label>
+                    <div class="input-group">
+                        {{ form.min_price(class="form-control", placeholder="Min") }}
+                        <span class="input-group-text">-</span>
+                        {{ form.max_price(class="form-control", placeholder="Max") }}
+                    </div>
+                </div>
+                <div class="col-12 text-center">
+                    {{ form.submit(class="btn btn-primary btn-lg px-5") }}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Popular Cities -->
+    <h2 class="mb-4">Popular Cities</h2>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3 mb-5">
+        {% for city in cities %}
+            <div class="col">
+                <a href="{{ url_for('user.search', city=city) }}" class="text-decoration-none">
+                    <div class="card h-100 text-center">
+                        <div class="card-body">
+                            <i class="fas fa-city fa-2x mb-3 text-primary"></i>
+                            <h5 class="card-title">{{ city }}</h5>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- How It Works -->
+    <h2 class="mb-4 text-center">How It Works</h2>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-5">
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Search</h4>
+                    <p class="card-text">Find turfs based on your location, preferred date, and budget.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-handshake fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Negotiate</h4>
+                    <p class="card-text">Propose your price and negotiate directly with turf owners.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card h-100 text-center">
+                <div class="card-body">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                    <h4 class="card-title">Book & Play</h4>
+                    <p class="card-text">Confirm your booking, make secure payment, and enjoy your game.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benefits -->
+    <div class="bg-dark text-light p-5 rounded mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="mb-4">Why Choose TurfTime?</h2>
+                <ul class="list-unstyled">
+                    <li class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i> Real-time availability checking</li>
+                    <li class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i> Price negotiation directly with turf owners</li>
+                    <li class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i> Secure online payments</li>
+                    <li class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i> Wide selection of high-quality turfs</li>
+                    <li class="mb-3"><i class="fas fa-check-circle me-2 text-success"></i> Easy booking management and cancellation</li>
+                </ul>
+            </div>
+            <div class="col-md-6 d-none d-md-block">
+                <div class="text-center">
+                    <svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="300" rx="10" fill="#27ae60" opacity="0.2"/>
+                        <rect x="50" y="50" width="300" height="200" rx="5" stroke="#27ae60" stroke-width="4" stroke-dasharray="10 5"/>
+                        <circle cx="200" cy="150" r="40" fill="#2980b9" opacity="0.8"/>
+                        <rect x="80" y="120" width="10" height="60" fill="white"/>
+                        <rect x="310" y="120" width="10" height="60" fill="white"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize date picker
+    document.addEventListener('DOMContentLoaded', function() {
+        const datePicker = document.querySelector('.date-picker');
+        if (datePicker) {
+            // Set min date to today
+            const today = new Date().toISOString().split('T')[0];
+            datePicker.setAttribute('min', today);
+            
+            datePicker.type = 'date';
+            
+            datePicker.addEventListener('blur', function() {
+                if (!this.value) {
+                    this.type = 'text';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

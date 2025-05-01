@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Negotiation Form -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">Price Negotiation</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <h5>Booking Information:</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Turf:</strong> {{ turf.name }}<br>
+                                <strong>Date:</strong> {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                <strong>Time:</strong> {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Original Price:</strong> ₹<span id="original-price" data-price="{{ booking.original_price }}">{{ booking.original_price }}</span><br>
+                                <strong>Current Offer:</strong> ₹{{ booking.total_price }}<br>
+                                <strong>Status:</strong> <span class="badge bg-warning text-dark">{{ booking.status }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Negotiation Timeline -->
+                    <div class="negotiation-timeline mb-4">
+                        <h5 class="mb-3">Negotiation History</h5>
+                        {% if negotiations %}
+                            {% for negotiation in negotiations %}
+                                <div class="timeline-item {{ 'user' if negotiation.proposed_by == 'user' else 'owner' }}">
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between">
+                                            <span class="timeline-date">{{ negotiation.created_at.strftime('%d %b, %I:%M %p') }}</span>
+                                            <span class="badge bg-{{ 'primary' if negotiation.proposed_by == 'user' else 'secondary' }}">
+                                                {{ 'You' if negotiation.proposed_by == 'user' else 'Owner' }}
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <p><strong>Proposed Price:</strong> ₹{{ negotiation.proposed_price }}</p>
+                                            {% if negotiation.counter_price %}
+                                                <p><strong>Counter Price:</strong> ₹{{ negotiation.counter_price }}</p>
+                                            {% endif %}
+                                            {% if negotiation.message %}
+                                                <p><strong>Message:</strong> {{ negotiation.message }}</p>
+                                            {% endif %}
+                                            {% if negotiation.is_accepted is not none %}
+                                                <p>
+                                                    <span class="badge bg-{{ 'success' if negotiation.is_accepted else 'danger' }}">
+                                                        {{ 'Accepted' if negotiation.is_accepted else 'Rejected' }}
+                                                    </span>
+                                                </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-light">
+                                <p class="mb-0">No negotiation history yet.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Counter Offer Form -->
+                    <form method="POST" action="" id="negotiation-form">
+                        {{ form.hidden_tag() }}
+                        {{ form.action(id="action") }}
+                        
+                        <div class="card mb-4 negotiation-container">
+                            <div class="card-body">
+                                <h5 class="mb-3">Your Response</h5>
+                                
+                                <div class="mb-3">
+                                    <label for="counter-slider" class="form-label">Your Counter Offer</label>
+                                    <input type="range" class="form-range" id="counter-slider" min="0" max="100" step="1">
+                                    <div class="price-range">
+                                        <small id="min-price" class="text-muted">Min: ₹0</small>
+                                        <small id="savings" class="text-success">Save ₹0.00 (0%)</small>
+                                        <small id="max-price" class="text-muted">Max: ₹{{ booking.original_price }}</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    {{ form.proposed_price.label(class="form-label") }}
+                                    {% if form.proposed_price.errors %}
+                                        {{ form.proposed_price(class="form-control is-invalid", min="0", step="0.01") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.proposed_price.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        {{ form.proposed_price(class="form-control", min="0", step="0.01") }}
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    {{ form.message.label(class="form-label") }}
+                                    {% if form.message.errors %}
+                                        {{ form.message(class="form-control is-invalid", rows="3") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.message.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        {{ form.message(class="form-control", rows="3", placeholder="Add a message to explain your counter offer...") }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="button" id="cancel-btn" class="btn btn-outline-danger">
+                                <i class="fas fa-times me-2"></i>Cancel Booking
+                            </button>
+                            <div>
+                                <button type="button" id="counter-btn" class="btn btn-warning me-2">
+                                    <i class="fas fa-exchange-alt me-2"></i>Send Counter Offer
+                                </button>
+                                <button type="button" id="accept-btn" class="btn btn-success">
+                                    <i class="fas fa-check me-2"></i>Accept Price
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Turf Info Sidebar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Turf Details</h5>
+                </div>
+                <div class="card-body">
+                    {% set primary_image = turf.images.filter_by(is_primary=True).first() %}
+                    {% if primary_image %}
+                        <img src="{{ primary_image.url }}" class="img-fluid rounded mb-3" alt="{{ turf.name }}">
+                    {% endif %}
+                    
+                    <h5>{{ turf.name }}</h5>
+                    <p class="text-muted">
+                        <i class="fas fa-map-marker-alt me-2"></i> {{ turf.address }}, {{ turf.city }}
+                    </p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-{% if turf.indoor %}info{% else %}success{% endif %} me-2">
+                            {{ 'Indoor' if turf.indoor else 'Outdoor' }}
+                        </span>
+                        {% if turf.size %}
+                            <span class="badge bg-secondary">{{ turf.size }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6>Base Price</h6>
+                        <p class="h5 text-primary">₹{{ turf.base_price_per_hour }} <small class="text-muted">per hour</small></p>
+                    </div>
+                    
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">Negotiation Tips</h6>
+                            <ul class="small">
+                                <li>Be reasonable with your counter offers</li>
+                                <li>Add a friendly message explaining your offer</li>
+                                <li>Consider off-peak hours for better rates</li>
+                                <li>Owners can reject unreasonable offers</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/negotiation.js') }}"></script>
+{% endblock %}

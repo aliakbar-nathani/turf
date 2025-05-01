@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Turfs</h1>
+        <a href="{{ url_for('owner.new_turf') }}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i> Add New Turf
+        </a>
+    </div>
+    
+    {% if turfs %}
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+            {% for turf in turfs %}
+                <div class="col">
+                    <div class="card h-100 turf-card">
+                        <div class="position-relative">
+                            {% set primary_image = turf.images.filter_by(is_primary=True).first() %}
+                            {% if primary_image %}
+                                <img src="{{ primary_image.url }}" class="card-img-top" alt="{{ turf.name }}">
+                            {% else %}
+                                <svg class="card-img-top" width="100%" height="200" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid slice" focusable="false">
+                                    <rect width="100%" height="100%" fill="#27ae60" opacity="0.3"/>
+                                    <text x="50%" y="50%" fill="#444" dy=".3em" text-anchor="middle">No Image</text>
+                                </svg>
+                            {% endif %}
+                            <div class="turf-price">₹{{ turf.base_price_per_hour }}/hr</div>
+                            <div class="position-absolute bottom-0 start-0 m-2">
+                                <span class="badge bg-{{ 'success' if turf.active else 'danger' }} p-2">
+                                    {{ 'Active' if turf.active else 'Inactive' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ turf.name }}</h5>
+                            <p class="card-text">
+                                <i class="fas fa-map-marker-alt me-2"></i> {{ turf.address }}, {{ turf.city }}<br>
+                                {% if turf.size %}
+                                    <i class="fas fa-expand-arrows-alt me-2"></i> {{ turf.size }}<br>
+                                {% endif %}
+                                <span class="badge bg-{% if turf.indoor %}info{% else %}success{% endif %} me-2">
+                                    {{ 'Indoor' if turf.indoor else 'Outdoor' }}
+                                </span>
+                            </p>
+                            
+                            {% if turf.features %}
+                                <div class="turf-features">
+                                    {% for feature in turf.features.split(',') %}
+                                        <span class="turf-feature">{{ feature.strip() }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('owner.edit_turf', turf_id=turf.id) }}" class="btn btn-primary">
+                                    <i class="fas fa-edit me-2"></i>Edit
+                                </a>
+                                <a href="{{ url_for('owner.manage_slots', turf_id=turf.id) }}" class="btn btn-info">
+                                    <i class="fas fa-clock me-2"></i>Time Slots
+                                </a>
+                                <a href="{{ url_for('owner.bookings', turf_id=turf.id) }}" class="btn btn-secondary">
+                                    <i class="fas fa-calendar-alt me-2"></i>Bookings
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-building fa-5x text-muted"></i>
+            </div>
+            <h3>No Turfs Found</h3>
+            <p class="text-muted">You haven't added any turfs yet. Get started by adding your first turf.</p>
+            <a href="{{ url_for('owner.new_turf') }}" class="btn btn-primary mt-3">
+                <i class="fas fa-plus me-2"></i> Add Your First Turf
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

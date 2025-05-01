@@ -1,0 +1,137 @@
+{% extends "layout.html" %}
+
+{% block title %}Resolve Dispute{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Resolve Dispute #{{ dispute.id }}</h1>
+        <a href="{{ url_for('admin.disputes') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Disputes
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Dispute Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Dispute Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h4>{{ dispute.title }}</h4>
+                        <span class="badge bg-{{ 'danger' if dispute.status == 'open' else 'warning' if dispute.status == 'in_progress' else 'success' if dispute.status == 'resolved' else 'secondary' }}">
+                            {{ dispute.status }}
+                        </span>
+                        <span class="text-muted ms-2">Reported on {{ dispute.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Description</h5>
+                        <p>{{ dispute.description }}</p>
+                    </div>
+                    
+                    {% if dispute.status in ['resolved', 'closed'] and dispute.resolution %}
+                        <div class="mb-4">
+                            <h5>Resolution</h5>
+                            <div class="alert alert-success">
+                                <p class="mb-0">{{ dispute.resolution }}</p>
+                            </div>
+                            <small class="text-muted">Resolved on {{ dispute.resolved_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+                        </div>
+                    {% endif %}
+                    
+                    {% if dispute.status in ['open', 'in_progress'] %}
+                        <form method="POST" action="">
+                            <div class="mb-3">
+                                <h5>Provide Resolution</h5>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="action" id="resolve" value="resolve" checked>
+                                    <label class="form-check-label" for="resolve">
+                                        Mark as Resolved (issue fixed, user satisfied)
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="action" id="close" value="close">
+                                    <label class="form-check-label" for="close">
+                                        Close without Resolution (cannot be addressed)
+                                    </label>
+                                </div>
+                                
+                                <label for="resolution" class="form-label">Resolution Message</label>
+                                <textarea class="form-control" id="resolution" name="resolution" rows="4" required placeholder="Explain how the issue was resolved or why it was closed..."></textarea>
+                            </div>
+                            
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">Submit Resolution</button>
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- User Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">User Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Username:</strong> {{ dispute.user.username }}</p>
+                    <p><strong>Email:</strong> {{ dispute.user.email }}</p>
+                    <p><strong>Phone:</strong> {{ dispute.user.phone_number or 'Not provided' }}</p>
+                    <p><strong>Member Since:</strong> {{ dispute.user.created_at.strftime('%d %b %Y') }}</p>
+                    <a href="{{ url_for('admin.edit_user', user_id=dispute.user_id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-user me-2"></i>View User Profile
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Booking Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Booking Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Booking ID:</strong> {{ booking.id }}</p>
+                    <p><strong>Date:</strong> {{ booking.booking_date.strftime('%d %b %Y') }}</p>
+                    <p><strong>Time:</strong> {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}</p>
+                    <p><strong>Price:</strong> ₹{{ booking.total_price }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="booking-status status-{{ booking.status.lower() }}">
+                            {{ booking.status }}
+                        </span>
+                    </p>
+                    <p><strong>Payment:</strong> 
+                        <span class="badge bg-{{ 'success' if booking.payment_status == 'paid' else 'warning text-dark' }}">
+                            {{ booking.payment_status }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Turf Info -->
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Turf Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Turf Name:</strong> {{ turf.name }}</p>
+                    <p><strong>Location:</strong> {{ turf.address }}, {{ turf.city }}</p>
+                    <p><strong>Owner:</strong> {{ turf.owner.username }}</p>
+                    <p><strong>Type:</strong> 
+                        <span class="badge bg-{{ 'info' if turf.indoor else 'success' }}">
+                            {{ 'Indoor' if turf.indoor else 'Outdoor' }}
+                        </span>
+                    </p>
+                    <a href="{{ url_for('booking.view_turf', turf_id=turf.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-building me-2"></i>View Turf
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

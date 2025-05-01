@@ -1,0 +1,150 @@
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6 hero-content">
+                <h1 class="mb-4">Find Your Perfect Turf</h1>
+                <p class="lead mb-4">Book sports turfs near you, negotiate prices, and enjoy your game. Real-time availability and seamless booking experience.</p>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <a href="{{ url_for('user.search') }}" class="btn btn-primary btn-lg px-4 me-md-2">Find a Turf</a>
+                    <a href="{{ url_for('auth.register_owner') }}" class="btn btn-outline-light btn-lg px-4">List Your Turf</a>
+                </div>
+            </div>
+            <div class="col-md-6 d-none d-md-block">
+                <div class="text-center">
+                    <svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="300" rx="10" fill="#27ae60" opacity="0.2"/>
+                        <rect x="50" y="50" width="300" height="200" rx="5" stroke="#27ae60" stroke-width="4" stroke-dasharray="10 5"/>
+                        <circle cx="200" cy="150" r="40" fill="#2980b9" opacity="0.8"/>
+                        <rect x="80" y="120" width="10" height="60" fill="white"/>
+                        <rect x="310" y="120" width="10" height="60" fill="white"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <h2 class="text-center mb-5">How It Works</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Find a Turf</h5>
+                    <p class="card-text">Search for available turfs based on location, date, and preferences. Filter by price, type, and more.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-handshake fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Negotiate Price</h5>
+                    <p class="card-text">Propose your price and negotiate directly with turf owners to get the best deal for your booking.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-calendar-check fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Book & Play</h5>
+                    <p class="card-text">Confirm your booking with secure payment and enjoy your game. Receive updates and reminders.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-dark py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2 class="mb-4">Own a Turf?</h2>
+                <p class="lead mb-4">List your turf on our platform and reach thousands of players. Manage bookings, set custom pricing, and grow your business.</p>
+                <a href="{{ url_for('auth.register_owner') }}" class="btn btn-primary btn-lg">Register as Turf Owner</a>
+            </div>
+            <div class="col-md-6 d-none d-md-block">
+                <div class="text-center">
+                    <svg width="400" height="300" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="400" height="300" rx="10" fill="#2980b9" opacity="0.2"/>
+                        <rect x="100" y="80" width="200" height="140" rx="10" fill="#27ae60" opacity="0.5"/>
+                        <rect x="130" y="50" width="140" height="30" rx="5" fill="#e74c3c" opacity="0.8"/>
+                        <rect x="160" y="170" width="80" height="80" rx="40" fill="#f39c12" opacity="0.8"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <h2 class="text-center mb-5">Why Choose TurfTime</h2>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Real-time Availability</h5>
+                    <p class="card-text">See available slots in real-time and book instantly.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-money-bill-wave fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Price Negotiation</h5>
+                    <p class="card-text">Propose your price and negotiate directly with owners.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-shield-alt fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Secure Payments</h5>
+                    <p class="card-text">Pay securely online with multiple payment options.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-star fa-2x"></i>
+                    </div>
+                    <h5 class="card-title">Verified Turfs</h5>
+                    <p class="card-text">All turfs are verified for quality and authenticity.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2>Ready to play?</h2>
+        <p class="lead">Find and book the best turfs near you.</p>
+        <a href="{{ url_for('user.search') }}" class="btn btn-primary btn-lg">Find a Turf Now</a>
+    </div>
+</div>
+{% endblock %}

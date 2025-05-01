@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ turf.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Turf Details -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h1 class="mb-0">{{ turf.name }}</h1>
+                        <span class="badge bg-{% if turf.indoor %}info{% else %}success{% endif %} p-2">
+                            {{ 'Indoor' if turf.indoor else 'Outdoor' }}
+                        </span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <p class="lead">
+                            <i class="fas fa-map-marker-alt me-2 text-primary"></i> {{ turf.address }}, {{ turf.city }}, {{ turf.state }}
+                        </p>
+                    </div>
+                    
+                    {% if primary_image %}
+                        <div class="mb-4 text-center">
+                            <img src="{{ primary_image.url }}" class="img-fluid rounded" alt="{{ turf.name }}" style="max-height: 400px;">
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Base Price</h5>
+                            <p class="h3 text-primary">₹{{ turf.base_price_per_hour }} <small class="text-muted">per hour</small></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Size</h5>
+                            <p class="h5">{{ turf.size or 'Not specified' }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h5>Description</h5>
+                        <p>{{ turf.description or 'No description available.' }}</p>
+                    </div>
+                    
+                    {% if features %}
+                        <div class="mb-4">
+                            <h5>Features</h5>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                {% for feature in features %}
+                                    <span class="badge bg-secondary p-2">{{ feature.strip() }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-grid">
+                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-primary btn-lg">Book Now</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Turf Owner Info -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">About the Owner</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-user-circle fa-3x text-primary"></i>
+                        </div>
+                        <div>
+                            <h5>{{ turf.owner.username }}</h5>
+                            <p class="text-muted mb-0">Owner since {{ turf.owner.created_at.strftime('%b %Y') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Availability Calendar -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Check Availability</h5>
+                </div>
+                <div class="card-body">
+                    <div id="availability-calendar" class="mb-4" data-turf-id="{{ turf.id }}"></div>
+                    
+                    <h5 class="mb-3">Available Slots Today</h5>
+                    <div id="available-slots">
+                        {% if available_slots %}
+                            <div class="list-group">
+                                {% for slot in available_slots %}
+                                    <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="list-group-item list-group-item-action slot-item" data-slot-id="{{ slot.id }}">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ slot.start_time.strftime('%I:%M %p') }} - {{ slot.end_time.strftime('%I:%M %p') }}</h6>
+                                            <span class="badge bg-success">₹{{ (turf.base_price_per_hour * (1 + slot.price_adjustment/100))|round(2) }}</span>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">No available slots for today.</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid mt-3">
+                        <a href="{{ url_for('booking.book_turf', turf_id=turf.id) }}" class="btn btn-outline-primary">See All Slots & Book</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map Location (Placeholder) -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Location</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <svg width="100%" height="200" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="xMidYMid slice" focusable="false">
+                            <rect width="100%" height="100%" fill="#27ae60" opacity="0.2"/>
+                            <text x="50%" y="50%" fill="#444" dy=".3em" text-anchor="middle">Map Placeholder</text>
+                        </svg>
+                    </div>
+                    <p class="mt-2">
+                        <i class="fas fa-map-marker-alt me-2 text-danger"></i> {{ turf.address }}, {{ turf.city }}, {{ turf.state }}, {{ turf.postal_code }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}
