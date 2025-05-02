@@ -184,7 +184,14 @@ def book_turf(turf_id):
         
         # Apply user's price negotiation if provided and negotiation is enabled
         user_price = form.proposed_price.data
-        negotiation_enabled = form.negotiation_enabled.data == '1'
+        
+        # Get the negotiation_enabled value from the request form directly
+        negotiation_enabled_value = request.form.get('negotiation_enabled', '0')
+        print(f"DEBUG: negotiation_enabled raw value from request: '{negotiation_enabled_value}'")
+        
+        # Convert to boolean based on string value '1'
+        negotiation_enabled = negotiation_enabled_value == '1'
+        print(f"DEBUG: negotiation_enabled after check: {negotiation_enabled}")
         
         # If negotiation is not enabled, ignore any proposed price
         if not negotiation_enabled:

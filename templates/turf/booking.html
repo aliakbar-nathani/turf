@@ -59,7 +59,7 @@
                                 <label class="form-check-label" for="negotiation-toggle">
                                     <i class="fas fa-handshake me-2"></i> I want to negotiate the price
                                 </label>
-                                {{ form.negotiation_enabled(id="negotiation-enabled-field", type="hidden", value="0") }}
+                                <input type="hidden" name="negotiation_enabled" id="negotiation-enabled-field" value="0">
                             </div>
                         </div>
                         
@@ -487,9 +487,11 @@
                     negotiationSection.style.display = 'block';
                     paymentOptionsSection.style.display = 'none';
                     
-                    if (negotiationEnabledField) {
-                        negotiationEnabledField.value = '1';
-                    }
+                    // Set the hidden field to 1 for server-side processing
+                    negotiationEnabledField.value = '1';
+                    
+                    // Log the value for debugging
+                    console.log('Negotiation enabled set to: ' + negotiationEnabledField.value);
                     
                     // Set the proposed price to the original price when showing negotiation section
                     const originalPrice = parseFloat(document.getElementById('original_price').value);
@@ -516,9 +518,11 @@
                     negotiationSection.style.display = 'none';
                     paymentOptionsSection.style.display = 'block';
                     
-                    if (negotiationEnabledField) {
-                        negotiationEnabledField.value = '0';
-                    }
+                    // Set the hidden field to 0 for server-side processing
+                    negotiationEnabledField.value = '0';
+                    
+                    // Log the value for debugging
+                    console.log('Negotiation enabled set to: ' + negotiationEnabledField.value);
                     
                     const originalPrice = document.getElementById('original_price');
                     if (originalPrice) {
