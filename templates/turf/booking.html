@@ -461,11 +461,21 @@
                 
         // Handle negotiation toggle
         if (negotiationToggle && negotiationSection && proposedPriceInput && paymentOptionsSection) {
-            // Initially show payment options when negotiation is off
-            if (!negotiationToggle.checked) {
-                paymentOptionsSection.style.display = 'block';
-            } else {
+            // Check hidden field value first (in case it was set from server)
+            const negotiationEnabledField = document.getElementById('negotiation-enabled-field');
+            
+            if (negotiationEnabledField && negotiationEnabledField.value === '1') {
+                negotiationToggle.checked = true;
+                negotiationSection.style.display = 'block';
                 paymentOptionsSection.style.display = 'none';
+                
+                // Update submit button text for negotiation
+                const submitBtn = document.querySelector('[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Submit Negotiation Request';
+                }
+            } else {
+                paymentOptionsSection.style.display = 'block';
             }
             
             negotiationToggle.addEventListener('change', function() {
