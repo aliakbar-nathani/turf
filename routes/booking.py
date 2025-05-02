@@ -190,23 +190,18 @@ def book_turf(turf_id):
         if not negotiation_enabled:
             user_price = None
         
-        # Get payment method
+        # Initialize variables
+        booking_status = BookingStatus.PENDING
         payment_method = form.payment_option.data
         
-        # Determine booking status based on payment method and negotiation
-        booking_status = BookingStatus.PENDING
-        
-        # If negotiation is enabled, always set status to negotiating
-        # This is the key change - any negotiation must be approved by owner before payment
+        # Handle negotiation case
         if negotiation_enabled:
             booking_status = BookingStatus.NEGOTIATING
-            # For negotiation, payment will be handled after negotiation is complete
             payment_method = 'pending_negotiation'
+        # Handle regular booking cases
         elif payment_method == 'pay_on_arrival':
-            # Pay on arrival bookings are confirmed directly
             booking_status = BookingStatus.CONFIRMED
         else:
-            # Online payment bookings are "payment pending" until payment is completed
             booking_status = BookingStatus.PAYMENT_PENDING
         
         # Create the booking
