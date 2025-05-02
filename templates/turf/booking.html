@@ -59,7 +59,7 @@
                                 <label class="form-check-label" for="negotiation-toggle">
                                     <i class="fas fa-handshake me-2"></i> I want to negotiate the price
                                 </label>
-                                {{ form.negotiation_enabled(id="negotiation-enabled-field", type="hidden") }}
+                                {{ form.negotiation_enabled(id="negotiation-enabled-field", type="hidden", value="0") }}
                             </div>
                         </div>
                         
@@ -107,8 +107,8 @@
                             </div>
                         </div>
                         
-                        <!-- Payment Options (hidden initially until negotiation is complete) -->
-                        <div class="mb-4" id="payment-options-section" style="display: none;">
+                        <!-- Payment Options (shown only when not negotiating) -->
+                        <div class="mb-4" id="payment-options-section" style="display: block;">
                             <div class="card">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0">Payment Options</h5>
@@ -464,6 +464,8 @@
             // Initially show payment options when negotiation is off
             if (!negotiationToggle.checked) {
                 paymentOptionsSection.style.display = 'block';
+            } else {
+                paymentOptionsSection.style.display = 'none';
             }
             
             negotiationToggle.addEventListener('change', function() {
