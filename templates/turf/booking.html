@@ -112,8 +112,8 @@
                             </div>
                         </div>
                         
-                        <!-- Payment Options -->
-                        <div class="mb-4" id="payment-options-section">
+                        <!-- Payment Options (hidden initially until negotiation is complete) -->
+                        <div class="mb-4" id="payment-options-section" style="display: none;">
                             <div class="card">
                                 <div class="card-header bg-light">
                                     <h5 class="mb-0">Payment Options</h5>
@@ -366,8 +366,8 @@
                         originalPriceEl.value = price;
                         
                         // Update proposed price input with the original price
-                        if (document.getElementById('proposed_price')) {
-                            document.getElementById('proposed_price').value = price;
+                        if (proposedPriceInput) {
+                            proposedPriceInput.value = price;
                         }
                         
                         // Update price slider range
@@ -478,17 +478,24 @@
             }
         }
         
+        // Use the payment options and negotiation elements now
+        // No need to create new variables since we defined them globally
+                
         // Handle negotiation toggle
         if (negotiationToggle && negotiationSection && proposedPriceInput && priceSlider && paymentOptionsSection) {
-            // Initially hide the payment options section
-            // paymentOptionsSection.style.display = 'none';
+            // Initially show payment options when negotiation is off
+            if (!negotiationToggle.checked) {
+                paymentOptionsSection.style.display = 'block';
+            }
             
             negotiationToggle.addEventListener('change', function() {
                 const negotiationEnabledField = document.getElementById('negotiation-enabled-field');
                 
                 if (this.checked) {
-                    // Show negotiation section
+                    // Show negotiation section, hide payment options until negotiation is complete
                     negotiationSection.style.display = 'block';
+                    paymentOptionsSection.style.display = 'none';
+                    
                     if (negotiationEnabledField) {
                         negotiationEnabledField.value = '1';
                     }
@@ -505,9 +512,26 @@
                         proposedPriceInput.value = originalPrice;
                         updateSavingsText();
                     }
+                    
+                    // Add a "Continue to Payment" button at the end of negotiation section if not present
+                    if (!document.getElementById('continue-to-payment-btn')) {
+                        const continueBtn = document.createElement('button');
+                        continueBtn.id = 'continue-to-payment-btn';
+                        continueBtn.type = 'button';
+                        continueBtn.className = 'btn btn-success mt-3';
+                        continueBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirm Price & Continue to Payment';
+                        continueBtn.onclick = function() {
+                            // When clicked, hide negotiation section and show payment options
+                            negotiationSection.style.display = 'none';
+                            paymentOptionsSection.style.display = 'block';
+                        };
+                        negotiationSection.querySelector('.card-body').appendChild(continueBtn);
+                    }
                 } else {
-                    // Hide negotiation section and reset proposed price to original
+                    // Hide negotiation section, show payment options, and reset proposed price to original
                     negotiationSection.style.display = 'none';
+                    paymentOptionsSection.style.display = 'block';
+                    
                     if (negotiationEnabledField) {
                         negotiationEnabledField.value = '0';
                     }
