@@ -196,8 +196,9 @@ def book_turf(turf_id):
         # Determine booking status based on payment method and negotiation
         booking_status = BookingStatus.PENDING
         
-        # If negotiation is enabled with a lower price, set status to negotiating
-        if negotiation_enabled and user_price and user_price < total_price:
+        # If negotiation is enabled, always set status to negotiating
+        # This is the key change - any negotiation must be approved by owner before payment
+        if negotiation_enabled:
             booking_status = BookingStatus.NEGOTIATING
             # For negotiation, payment will be handled after negotiation is complete
             payment_method = 'pending_negotiation'
@@ -216,7 +217,7 @@ def book_turf(turf_id):
             start_time=time_slot.start_time,
             end_time=time_slot.end_time,
             original_price=total_price,
-            total_price=total_price if not user_price else user_price,
+            total_price=total_price if not negotiation_enabled else user_price,
             user_proposed_price=user_price if negotiation_enabled else None,
             payment_method=payment_method,
             payment_status='pending_payment',
@@ -225,8 +226,8 @@ def book_turf(turf_id):
         
         db.session.add(booking)
         
-        # If user proposed a different price and negotiation is enabled, create a negotiation record
-        if negotiation_enabled and user_price and user_price < total_price:
+        # If negotiation is enabled, create a negotiation record regardless of price
+        if negotiation_enabled:
             negotiation = Negotiation(
                 booking_id=booking.id,
                 proposed_price=user_price,
@@ -237,8 +238,8 @@ def book_turf(turf_id):
         
         db.session.commit()
         
-        if booking.status == BookingStatus.PENDING:
-            flash('Your booking request with price negotiation has been sent to the turf owner!', 'success')
+        if booking.status == BookingStatus.NEGOTIATING:
+            flash('Your booking request with price negotiation has been sent to the turf owner! You\'ll be able to proceed with payment once they respond.', 'success')
             return redirect(url_for('user.bookings'))
         else:
             # If payment method is pay_on_arrival, redirect to bookings page

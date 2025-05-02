@@ -72,26 +72,21 @@
                                 <input type="hidden" id="original_price" value="0">
                                 
                                 <div class="mb-3">
-                                    <label for="priceSlider" class="form-label">Your Offer</label>
-                                    <input type="range" class="form-range" id="priceSlider" min="0" max="100" step="1">
-                                    <div class="price-range">
-                                        <small id="min-price" class="text-muted">Min: ₹0</small>
-                                        <small id="savings" class="text-success">Save ₹0.00 (0%)</small>
-                                        <small id="max-price" class="text-muted">Max: ₹0</small>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Original Price: <span class="text-primary fw-bold" id="display-original-price">₹0.00</span></span>
+                                        <span id="savings" class="text-success">Save ₹0.00 (0%)</span>
                                     </div>
-                                </div>
-                                
-                                <div class="mb-3">
+                                    
                                     {{ form.proposed_price.label(class="form-label") }}
                                     {% if form.proposed_price.errors %}
-                                        {{ form.proposed_price(class="form-control is-invalid", min="0", step="0.01") }}
+                                        {{ form.proposed_price(class="form-control is-invalid", min="0", step="0.01", placeholder="Enter your proposed price") }}
                                         <div class="invalid-feedback">
                                             {% for error in form.proposed_price.errors %}
                                                 {{ error }}
                                             {% endfor %}
                                         </div>
                                     {% else %}
-                                        {{ form.proposed_price(class="form-control", min="0", step="0.01") }}
+                                        {{ form.proposed_price(class="form-control", min="0", step="0.01", placeholder="Enter your proposed price") }}
                                     {% endif %}
                                     <div class="form-text">Enter your proposed price here.</div>
                                 </div>
@@ -343,14 +338,14 @@
         const timeSlotSelect = document.getElementById('time_slot');
         const totalPriceEl = document.getElementById('total-price');
         const originalPriceEl = document.getElementById('original_price');
-        const priceSlider = document.getElementById('priceSlider');
+        const displayOriginalPriceEl = document.getElementById('display-original-price');
         const negotiationToggle = document.getElementById('negotiation-toggle');
         const negotiationSection = document.getElementById('negotiation-section');
         const proposedPriceInput = document.getElementById('proposed_price');
         const paymentOptionsSection = document.getElementById('payment-options-section');
         
         // Handle time slot selection
-        if (timeSlotSelect && totalPriceEl && originalPriceEl && priceSlider) {
+        if (timeSlotSelect && totalPriceEl && originalPriceEl) {
             timeSlotSelect.addEventListener('change', function() {
                 const selectedOption = this.options[this.selectedIndex];
                 if (selectedOption && selectedOption.text) {
@@ -365,37 +360,21 @@
                         // Update original price for negotiation
                         originalPriceEl.value = price;
                         
+                        // Update display original price text
+                        if (displayOriginalPriceEl) {
+                            displayOriginalPriceEl.textContent = `₹${price.toFixed(2)}`;
+                        }
+                        
                         // Update proposed price input with the original price
                         if (proposedPriceInput) {
                             proposedPriceInput.value = price;
                         }
                         
-                        // Update price slider range
-                        if (priceSlider) {
-                            console.log('Setting up price slider range for price:', price);
-                            const minPrice = Math.floor(price * 0.5);  // 50% of original
-                            const maxPrice = Math.ceil(price * 1.2);   // 120% of original
-                            
-                            // Make sure price is within range
-                            priceSlider.min = minPrice;
-                            priceSlider.max = maxPrice;
-                            priceSlider.value = price;
-                            
-                            console.log(`Slider configured: min=${minPrice}, max=${maxPrice}, value=${price}`);
-                            
-                            // Update min/max price labels
-                            if (document.getElementById('min-price')) {
-                                document.getElementById('min-price').textContent = `Min: ₹${minPrice}`;
-                            }
-                            if (document.getElementById('max-price')) {
-                                document.getElementById('max-price').textContent = `Max: ₹${maxPrice}`;
-                            }
-                            
-                            // Update savings text
-                            const savingsEl = document.getElementById('savings');
-                            if (savingsEl) {
-                                savingsEl.textContent = `Save ₹0.00 (0%)`;
-                            }
+                        // Update savings text
+                        const savingsEl = document.getElementById('savings');
+                        if (savingsEl) {
+                            savingsEl.textContent = `Save ₹0.00 (0%)`;
+                        }
                         }
                     }
                 }
@@ -482,7 +461,7 @@
         // No need to create new variables since we defined them globally
                 
         // Handle negotiation toggle
-        if (negotiationToggle && negotiationSection && proposedPriceInput && priceSlider && paymentOptionsSection) {
+        if (negotiationToggle && negotiationSection && proposedPriceInput && paymentOptionsSection) {
             // Initially show payment options when negotiation is off
             if (!negotiationToggle.checked) {
                 paymentOptionsSection.style.display = 'block';
@@ -490,6 +469,7 @@
             
             negotiationToggle.addEventListener('change', function() {
                 const negotiationEnabledField = document.getElementById('negotiation-enabled-field');
+                const submitBtn = document.querySelector('[type="submit"]');
                 
                 if (this.checked) {
                     // Show negotiation section, hide payment options until negotiation is complete
@@ -500,32 +480,25 @@
                         negotiationEnabledField.value = '1';
                     }
                     
-                    // Reinitialize the slider when showing negotiation section
+                    // Set the proposed price to the original price when showing negotiation section
                     const originalPrice = parseFloat(document.getElementById('original_price').value);
                     if (!isNaN(originalPrice) && originalPrice > 0) {
-                        const minPrice = Math.floor(originalPrice * 0.5);
-                        const maxPrice = Math.ceil(originalPrice * 1.2);
-                        console.log(`Re-initializing slider on toggle: min=${minPrice}, max=${maxPrice}, value=${originalPrice}`);
-                        priceSlider.min = minPrice;
-                        priceSlider.max = maxPrice;
-                        priceSlider.value = originalPrice;
                         proposedPriceInput.value = originalPrice;
                         updateSavingsText();
                     }
                     
-                    // Add a "Continue to Payment" button at the end of negotiation section if not present
-                    if (!document.getElementById('continue-to-payment-btn')) {
-                        const continueBtn = document.createElement('button');
-                        continueBtn.id = 'continue-to-payment-btn';
-                        continueBtn.type = 'button';
-                        continueBtn.className = 'btn btn-success mt-3';
-                        continueBtn.innerHTML = '<i class="fas fa-check me-2"></i>Confirm Price & Continue to Payment';
-                        continueBtn.onclick = function() {
-                            // When clicked, hide negotiation section and show payment options
-                            negotiationSection.style.display = 'none';
-                            paymentOptionsSection.style.display = 'block';
-                        };
-                        negotiationSection.querySelector('.card-body').appendChild(continueBtn);
+                    // Update the submit button text for negotiation flow
+                    if (submitBtn) {
+                        submitBtn.textContent = 'Submit Negotiation Request';
+                    }
+                    
+                    // Add a note about the negotiation process
+                    if (!document.getElementById('negotiation-note')) {
+                        const noteDiv = document.createElement('div');
+                        noteDiv.id = 'negotiation-note';
+                        noteDiv.className = 'alert alert-info mt-3';
+                        noteDiv.innerHTML = '<i class="fas fa-info-circle me-2"></i> Your booking will be placed in a "Negotiating" status. You\'ll be able to proceed with payment once the owner responds to your offer.';
+                        negotiationSection.querySelector('.card-body').appendChild(noteDiv);
                     }
                 } else {
                     // Hide negotiation section, show payment options, and reset proposed price to original
@@ -542,21 +515,22 @@
                     } else {
                         proposedPriceInput.value = '';
                     }
+                    
+                    // Reset submit button text based on payment option
+                    if (submitBtn) {
+                        const paymentOption = document.getElementById('payment-option-select');
+                        if (paymentOption && paymentOption.value === 'pay_online') {
+                            submitBtn.textContent = 'Proceed to Payment';
+                        } else {
+                            submitBtn.textContent = 'Confirm Booking';
+                        }
+                    }
                 }
             });
             
-            // Add debugging to track slider changes
-            console.log('Setting up slider event listeners');
-            
-            priceSlider.addEventListener('input', function() {
-                console.log('Slider changed: ' + this.value);
-                proposedPriceInput.value = this.value;
-                updateSavingsText();
-            });
-            
+            // Update savings calculation when proposed price changes
             proposedPriceInput.addEventListener('input', function() {
                 console.log('Price input changed: ' + this.value);
-                priceSlider.value = this.value;
                 updateSavingsText();
             });
         }
