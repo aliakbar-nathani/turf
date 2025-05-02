@@ -127,7 +127,7 @@ class BookingForm(FlaskForm):
         ('pay_online', 'Pay Online Now'),
         ('pay_on_arrival', 'Pay On Arrival')
     ], default='pay_online', validators=[DataRequired()])
-    negotiation_enabled = HiddenField('Negotiation Enabled', default='0')
+    # Note: negotiation_enabled is handled via a standard HTML input in the template
     proposed_price = FloatField('Your Proposed Price (optional)', validators=[Optional(), NumberRange(min=0)])
     message = TextAreaField('Message to Owner (optional)', validators=[Optional()])
     submit = SubmitField('Book Now')
