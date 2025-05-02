@@ -364,12 +364,16 @@
                         
                         // Update price slider range
                         if (priceSlider) {
+                            console.log('Setting up price slider range for price:', price);
                             const minPrice = Math.floor(price * 0.5);  // 50% of original
                             const maxPrice = Math.ceil(price * 1.2);   // 120% of original
                             
+                            // Make sure price is within range
                             priceSlider.min = minPrice;
                             priceSlider.max = maxPrice;
                             priceSlider.value = price;
+                            
+                            console.log(`Slider configured: min=${minPrice}, max=${maxPrice}, value=${price}`);
                             
                             // Update min/max price labels
                             if (document.getElementById('min-price')) {
@@ -428,12 +432,51 @@
             }
         }
         
+        // Define updateSavingsText function in a scope accessible to all handlers
+        function updateSavingsText() {
+            const originalPriceEl = document.getElementById('original_price');
+            const proposedPriceInput = document.getElementById('proposed_price');
+            const savingsEl = document.getElementById('savings');
+            
+            if (!originalPriceEl || !proposedPriceInput || !savingsEl) {
+                console.log('Missing elements for savings calculation');
+                return;
+            }
+            
+            const originalPrice = parseFloat(originalPriceEl.value);
+            const proposedPrice = parseFloat(proposedPriceInput.value);
+            
+            console.log(`Calculating savings: original=${originalPrice}, proposed=${proposedPrice}`);
+            
+            if (!isNaN(originalPrice) && !isNaN(proposedPrice)) {
+                const savings = originalPrice - proposedPrice;
+                const savingsPercent = (savings / originalPrice * 100).toFixed(1);
+                
+                if (savings > 0) {
+                    savingsEl.textContent = `Save ₹${savings.toFixed(2)} (${savingsPercent}%)`;
+                    savingsEl.className = 'text-success';
+                } else if (savings < 0) {
+                    const premium = Math.abs(savings);
+                    const premiumPercent = Math.abs(savingsPercent);
+                    savingsEl.textContent = `Pay ₹${premium.toFixed(2)} extra (${premiumPercent}%)`;
+                    savingsEl.className = 'text-danger';
+                } else {
+                    savingsEl.textContent = 'Original price (0%)';
+                    savingsEl.className = 'text-muted';
+                }
+            } else {
+                savingsEl.textContent = 'Save ₹0.00 (0%)';
+                savingsEl.className = 'text-muted';
+            }
+        }
+        
         // Handle negotiation toggle
         const negotiationToggle = document.getElementById('negotiation-toggle');
         const negotiationSection = document.getElementById('negotiation-section');
         const proposedPriceInput = document.getElementById('proposed_price');
+        const priceSlider = document.getElementById('priceSlider');
         
-        if (negotiationToggle && negotiationSection && proposedPriceInput) {
+        if (negotiationToggle && negotiationSection && proposedPriceInput && priceSlider) {
             negotiationToggle.addEventListener('change', function() {
                 const negotiationEnabledField = document.getElementById('negotiation-enabled-field');
                 
@@ -442,6 +485,19 @@
                     negotiationSection.style.display = 'block';
                     if (negotiationEnabledField) {
                         negotiationEnabledField.value = '1';
+                    }
+                    
+                    // Reinitialize the slider when showing negotiation section
+                    const originalPrice = parseFloat(document.getElementById('original_price').value);
+                    if (!isNaN(originalPrice) && originalPrice > 0) {
+                        const minPrice = Math.floor(originalPrice * 0.5);
+                        const maxPrice = Math.ceil(originalPrice * 1.2);
+                        console.log(`Re-initializing slider on toggle: min=${minPrice}, max=${maxPrice}, value=${originalPrice}`);
+                        priceSlider.min = minPrice;
+                        priceSlider.max = maxPrice;
+                        priceSlider.value = originalPrice;
+                        proposedPriceInput.value = originalPrice;
+                        updateSavingsText();
                     }
                 } else {
                     // Hide negotiation section and reset proposed price to original
@@ -459,52 +515,20 @@
                 }
             });
             
-            // Handle price slider changes
-            const priceSlider = document.getElementById('priceSlider');
-            const minPriceEl = document.getElementById('min-price');
-            const maxPriceEl = document.getElementById('max-price');
-            const savingsEl = document.getElementById('savings');
+            // Add debugging to track slider changes
+            console.log('Setting up slider event listeners');
             
-            if (priceSlider && proposedPriceInput) {
-                priceSlider.addEventListener('input', function() {
-                    proposedPriceInput.value = this.value;
-                    updateSavingsText();
-                });
-                
-                proposedPriceInput.addEventListener('input', function() {
-                    priceSlider.value = this.value;
-                    updateSavingsText();
-                });
-                
-                function updateSavingsText() {
-                    const originalPriceEl = document.getElementById('original_price');
-                    if (!originalPriceEl || !proposedPriceInput || !savingsEl) return;
-                    
-                    const originalPrice = parseFloat(originalPriceEl.value);
-                    const proposedPrice = parseFloat(proposedPriceInput.value);
-                    
-                    if (!isNaN(originalPrice) && !isNaN(proposedPrice)) {
-                        const savings = originalPrice - proposedPrice;
-                        const savingsPercent = (savings / originalPrice * 100).toFixed(1);
-                        
-                        if (savings > 0) {
-                            savingsEl.textContent = `Save ₹${savings.toFixed(2)} (${savingsPercent}%)`;
-                            savingsEl.className = 'text-success';
-                        } else if (savings < 0) {
-                            const premium = Math.abs(savings);
-                            const premiumPercent = Math.abs(savingsPercent);
-                            savingsEl.textContent = `Pay ₹${premium.toFixed(2)} extra (${premiumPercent}%)`;
-                            savingsEl.className = 'text-danger';
-                        } else {
-                            savingsEl.textContent = 'Original price (0%)';
-                            savingsEl.className = 'text-muted';
-                        }
-                    } else {
-                        savingsEl.textContent = 'Save ₹0.00 (0%)';
-                        savingsEl.className = 'text-muted';
-                    }
-                }
-            }
+            priceSlider.addEventListener('input', function() {
+                console.log('Slider changed: ' + this.value);
+                proposedPriceInput.value = this.value;
+                updateSavingsText();
+            });
+            
+            proposedPriceInput.addEventListener('input', function() {
+                console.log('Price input changed: ' + this.value);
+                priceSlider.value = this.value;
+                updateSavingsText();
+            });
         }
     });
 </script>
