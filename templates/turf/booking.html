@@ -50,31 +50,7 @@
                             </div>
                         </div>
                         
-                        <!-- Payment Options -->
-                        <div class="mb-4">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Payment Options</h5>
-                                </div>
-                                <div class="card-body">
-                                    {{ form.payment_option.label(class="form-label") }}
-                                    {% if form.payment_option.errors %}
-                                        {{ form.payment_option(class="form-select is-invalid", id="payment-option-select") }}
-                                        <div class="invalid-feedback">
-                                            {% for error in form.payment_option.errors %}
-                                                {{ error }}
-                                            {% endfor %}
-                                        </div>
-                                    {% else %}
-                                        {{ form.payment_option(class="form-select", id="payment-option-select") }}
-                                    {% endif %}
-                                    <div class="form-text mt-2" id="payment-option-help">
-                                        <div id="pay-online-info"><i class="fas fa-info-circle me-1 text-info"></i> Pay securely online with credit/debit card via Stripe.</div>
-                                        <div id="pay-on-arrival-info" class="d-none"><i class="fas fa-info-circle me-1 text-info"></i> Pay with cash or card when you arrive at the turf.</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Payment Options will be moved after negotiation section -->
                         
                         <!-- Price Negotiation Toggle -->
                         <div class="mb-4">
@@ -132,6 +108,32 @@
                                     {% else %}
                                         {{ form.message(class="form-control", rows="3", placeholder="Add a message to the owner about your price proposal...") }}
                                     {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Options -->
+                        <div class="mb-4" id="payment-options-section">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Payment Options</h5>
+                                </div>
+                                <div class="card-body">
+                                    {{ form.payment_option.label(class="form-label") }}
+                                    {% if form.payment_option.errors %}
+                                        {{ form.payment_option(class="form-select is-invalid", id="payment-option-select") }}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.payment_option.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        {{ form.payment_option(class="form-select", id="payment-option-select") }}
+                                    {% endif %}
+                                    <div class="form-text mt-2" id="payment-option-help">
+                                        <div id="pay-online-info"><i class="fas fa-info-circle me-1 text-info"></i> Pay securely online with credit/debit card via Stripe.</div>
+                                        <div id="pay-on-arrival-info" class="d-none"><i class="fas fa-info-circle me-1 text-info"></i> Pay with cash or card when you arrive at the turf.</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -336,12 +338,18 @@
                 fetchTimeSlots(bookingDateField.value);
             }
         }
-        // Handle time slot selection
+        
+        // Initialize global variables for DOM elements
         const timeSlotSelect = document.getElementById('time_slot');
         const totalPriceEl = document.getElementById('total-price');
         const originalPriceEl = document.getElementById('original_price');
         const priceSlider = document.getElementById('priceSlider');
+        const negotiationToggle = document.getElementById('negotiation-toggle');
+        const negotiationSection = document.getElementById('negotiation-section');
+        const proposedPriceInput = document.getElementById('proposed_price');
+        const paymentOptionsSection = document.getElementById('payment-options-section');
         
+        // Handle time slot selection
         if (timeSlotSelect && totalPriceEl && originalPriceEl && priceSlider) {
             timeSlotSelect.addEventListener('change', function() {
                 const selectedOption = this.options[this.selectedIndex];
@@ -471,12 +479,10 @@
         }
         
         // Handle negotiation toggle
-        const negotiationToggle = document.getElementById('negotiation-toggle');
-        const negotiationSection = document.getElementById('negotiation-section');
-        const proposedPriceInput = document.getElementById('proposed_price');
-        const priceSlider = document.getElementById('priceSlider');
-        
-        if (negotiationToggle && negotiationSection && proposedPriceInput && priceSlider) {
+        if (negotiationToggle && negotiationSection && proposedPriceInput && priceSlider && paymentOptionsSection) {
+            // Initially hide the payment options section
+            // paymentOptionsSection.style.display = 'none';
+            
             negotiationToggle.addEventListener('change', function() {
                 const negotiationEnabledField = document.getElementById('negotiation-enabled-field');
                 
