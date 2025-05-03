@@ -330,42 +330,65 @@ def respond_booking(booking_id):
     if turf.owner_id != current_user.id:
         abort(403)
     
+    # Check if booking is in a negotiable state
+    if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING]:
+        flash('This booking is no longer negotiable.', 'warning')
+        return redirect(url_for('owner.bookings'))
+    
+    # Get form data
     action = request.form.get('action')
+    counter_price = request.form.get('counter_price')
+    message = request.form.get('message', '')
     
     if action == 'accept':
-        # Accept booking at the proposed/original price
-        booking.status = BookingStatus.CONFIRMED
-        flash('Booking has been confirmed!', 'success')
-    
+        # Accept the booking at current price
+        if booking.payment_method == 'pay_on_arrival':
+            booking.status = BookingStatus.CONFIRMED
+        else:
+            booking.status = BookingStatus.PAYMENT_PENDING
+            
+        # Update negotiation if it exists
+        latest_negotiation = Negotiation.query.filter_by(
+            booking_id=booking.id
+        ).order_by(Negotiation.created_at.desc()).first()
+        
+        if latest_negotiation:
+            latest_negotiation.is_accepted = True
+            
+        flash('You have accepted the booking!', 'success')
+        
     elif action == 'reject':
-        # Reject booking
+        # Reject the booking
         booking.status = BookingStatus.CANCELLED
-        flash('Booking has been rejected.', 'info')
-    
+        flash('You have rejected the booking.', 'info')
+        
     elif action == 'counter':
         # Make a counter offer
-        counter_price = float(request.form.get('counter_price', 0))
-        
-        if counter_price <= 0:
+        try:
+            counter_price = float(counter_price)
+            
+            if counter_price <= 0:
+                flash('Please enter a valid counter price.', 'danger')
+                return redirect(url_for('owner.bookings'))
+            
+            # Create negotiation record
+            negotiation = Negotiation(
+                booking_id=booking.id,
+                proposed_price=counter_price,
+                proposed_by='owner',
+                message=message
+            )
+            
+            db.session.add(negotiation)
+            
+            # Update booking status
+            booking.status = BookingStatus.NEGOTIATING
+            booking.total_price = counter_price  # Update with counter offer
+            
+            flash('Your counter offer has been sent to the user!', 'success')
+        except (ValueError, TypeError):
             flash('Please enter a valid counter price.', 'danger')
             return redirect(url_for('owner.bookings'))
-        
-        # Create negotiation record
-        negotiation = Negotiation(
-            booking_id=booking.id,
-            proposed_price=booking.total_price,
-            counter_price=counter_price,
-            proposed_by='owner',
-            message=request.form.get('message', '')
-        )
-        
-        db.session.add(negotiation)
-        
-        # Update booking status
-        booking.status = BookingStatus.NEGOTIATING
-        booking.total_price = counter_price  # Update with counter offer
-        
-        flash('Counter offer has been sent to the user.', 'success')
     
     db.session.commit()
     return redirect(url_for('owner.bookings'))
@@ -517,3 +540,5 @@ def analytics():
         least_popular_day=least_popular_day,
         title='Turf Analytics'
     )
+
+
