@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'config/app_theme.dart';
 import 'config/api_config.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/turf/home_screen.dart';
+import 'screens/main_menu_screen.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -44,12 +44,12 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       home: _isInitialized
         ? _isLoggedIn 
-          ? const HomeScreen() 
+          ? const MainMenuScreen() 
           : const LoginScreen()
         : const SplashScreen(),
       routes: {
         '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
+        '/home': (context) => const MainMenuScreen(),
       },
     );
   }

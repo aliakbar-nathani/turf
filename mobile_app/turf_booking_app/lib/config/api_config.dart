@@ -31,6 +31,15 @@ class ApiConfig {
   // Payment endpoints
   static const String checkout = '/payment/checkout';
   static const String paymentMethods = '/payment/methods';
+  
+  // Review endpoints
+  static const String reviews = '/turf/{id}/reviews';
+  static const String submitReview = '/turf/{id}/review';
+  static const String updateReview = '/review/{id}';
+  static const String deleteReview = '/review/{id}';
+  static const String respondToReview = '/owner/review/{id}/respond';
+  static const String userReviews = '/user/reviews';
+  static const String canReviewTurf = '/turf/{id}/can_review';
 }
 
 class AppConstants {
