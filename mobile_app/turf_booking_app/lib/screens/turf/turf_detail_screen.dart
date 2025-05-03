@@ -535,19 +535,35 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
                         Row(
                           children: [
-                            Text(
-                              _turf!.averageRating!.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontSize: 36,
-                                fontWeight: FontWeight.bold,
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                _turf!.averageRating!.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryColor,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -558,8 +574,9 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                                   RatingBarWidget(
                                     rating: _turf!.averageRating!.toDouble(),
                                     size: 24,
+                                    activeColor: Colors.amber,
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 6),
                                   Text(
                                     'Based on ${_turf!.reviewCount} ${_turf!.reviewCount == 1 ? 'review' : 'reviews'}',
                                     style: TextStyle(
@@ -573,30 +590,40 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: _navigateToReviews,
-                              icon: const Icon(Icons.comment),
-                              label: const Text('Read Reviews'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _navigateToReviews,
+                                icon: const Icon(Icons.comment),
+                                label: const Text('Read Reviews'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  foregroundColor: AppTheme.primaryColor,
+                                  side: BorderSide(color: AppTheme.primaryColor),
                                 ),
                               ),
                             ),
-                            ElevatedButton.icon(
-                              onPressed: _navigateToAddReview,
-                              icon: const Icon(Icons.rate_review),
-                              label: const Text('Write a Review'),
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _navigateToAddReview,
+                                icon: const Icon(Icons.rate_review),
+                                label: const Text('Write a Review'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  backgroundColor: AppTheme.primaryColor,
+                                  foregroundColor: Colors.white,
                                 ),
-                                backgroundColor: AppTheme.primaryColor,
                               ),
                             ),
                           ],
