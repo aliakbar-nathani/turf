@@ -3,10 +3,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../config/app_theme.dart';
 import '../../models/turf_model.dart';
+import '../../models/review_model.dart';
 import '../../services/turf_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/review_service.dart';
+import '../../widgets/rating_bar_widget.dart';
 import '../booking/create_booking_screen.dart';
 import '../auth/login_screen.dart';
+import 'reviews_screen.dart';
+import 'add_review_screen.dart';
 
 class TurfDetailScreen extends StatefulWidget {
   final int turfId;
@@ -20,11 +25,15 @@ class TurfDetailScreen extends StatefulWidget {
 class _TurfDetailScreenState extends State<TurfDetailScreen> {
   final AuthService _authService = AuthService();
   late TurfService _turfService;
+  late ReviewService _reviewService;
   
   bool _isLoading = true;
+  bool _isLoadingReviewEligibility = false;
   bool _isLoggedIn = false;
+  bool _canReview = false;
   Turf? _turf;
   String? _errorMessage;
+  String? _authToken;
   
   @override
   void initState() {
@@ -38,10 +47,37 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
     
     setState(() {
       _isLoggedIn = isLoggedIn;
+      _authToken = token;
       _turfService = TurfService(authToken: token);
+      _reviewService = ReviewService(authToken: token);
     });
     
     _loadTurfDetails();
+    
+    if (isLoggedIn) {
+      _checkReviewEligibility();
+    }
+  }
+  
+  Future<void> _checkReviewEligibility() async {
+    if (!_isLoggedIn || _authToken == null) return;
+    
+    setState(() {
+      _isLoadingReviewEligibility = true;
+    });
+    
+    try {
+      final result = await _reviewService.canReviewTurf(widget.turfId);
+      
+      setState(() {
+        _isLoadingReviewEligibility = false;
+        _canReview = result['canReview'] ?? false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingReviewEligibility = false;
+      });
+    }
   }
   
   Future<void> _loadTurfDetails() async {
@@ -165,6 +201,55 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
             child: const Text('Login'),
           ),
         ],
+      ),
+    );
+  }
+  
+  void _navigateToReviews() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewsScreen(
+          turfId: widget.turfId,
+          turfName: _turf?.name ?? 'Turf',
+        ),
+      ),
+    ).then((_) {
+      // Refresh turf details to update rating after returning from reviews
+      _loadTurfDetails();
+      if (_isLoggedIn) {
+        _checkReviewEligibility();
+      }
+    });
+  }
+  
+  void _navigateToAddReview() {
+    if (!_isLoggedIn) {
+      _showLoginPrompt();
+      return;
+    }
+    
+    if (!_canReview) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only review turfs you have booked and played on'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddReviewScreen(
+          turfId: widget.turfId,
+          turfName: _turf?.name ?? 'Turf',
+          onReviewUpdated: () {
+            _loadTurfDetails();
+            _checkReviewEligibility();
+          },
+        ),
       ),
     );
   }
