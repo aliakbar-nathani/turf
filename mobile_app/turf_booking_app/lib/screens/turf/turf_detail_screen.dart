@@ -510,6 +510,158 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                 
                 const SizedBox(height: 24.0),
                 
+                // Reviews section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Reviews',
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _navigateToReviews,
+                      child: const Text('View all'),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8.0),
+                
+                // Rating overview
+                if (_turf!.averageRating != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _turf!.averageRating!.toStringAsFixed(1),
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  RatingBarWidget(
+                                    rating: _turf!.averageRating!.toDouble(),
+                                    size: 24,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Based on ${_turf!.reviewCount} ${_turf!.reviewCount == 1 ? 'review' : 'reviews'}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: _navigateToReviews,
+                              icon: const Icon(Icons.comment),
+                              label: const Text('Read Reviews'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _navigateToAddReview,
+                              icon: const Icon(Icons.rate_review),
+                              label: const Text('Write a Review'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                backgroundColor: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_isLoggedIn && _isLoadingReviewEligibility)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16.0),
+                            child: LinearProgressIndicator(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // No reviews yet
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'No reviews yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Be the first to review this turf!',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _navigateToAddReview,
+                          icon: const Icon(Icons.rate_review),
+                          label: const Text('Write a Review'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            backgroundColor: AppTheme.primaryColor,
+                          ),
+                        ),
+                        if (_isLoggedIn && _isLoadingReviewEligibility)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 16.0),
+                            child: LinearProgressIndicator(),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                
+                const SizedBox(height: 24.0),
+                
                 // Book Now button
                 SizedBox(
                   width: double.infinity,

@@ -7,6 +7,7 @@ import '../../models/user_model.dart';
 import '../../services/user_service.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import 'user_reviews_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -388,6 +389,60 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           return 'Please enter a valid phone number';
                         }
                         return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16.0),
+            
+            // User activity section
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Activity',
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16.0),
+                    
+                    ListTile(
+                      leading: const Icon(Icons.rate_review),
+                      title: const Text('My Reviews'),
+                      subtitle: const Text('View and manage your turf reviews'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const UserReviewsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    const Divider(),
+                    
+                    ListTile(
+                      leading: const Icon(Icons.favorite),
+                      title: const Text('My Favorites'),
+                      subtitle: const Text('View your favorite turfs'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Favorites screen coming soon'),
+                          ),
+                        );
                       },
                     ),
                   ],

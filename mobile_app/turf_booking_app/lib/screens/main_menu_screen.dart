@@ -7,6 +7,7 @@ import 'auth/login_screen.dart';
 import 'turf/home_screen.dart';
 import 'booking/user_bookings_screen.dart';
 import 'profile/user_profile_screen.dart';
+import 'profile/user_reviews_screen.dart';
 import 'turf/search_screen.dart';
 
 class MainMenuScreen extends StatefulWidget {
@@ -263,6 +264,17 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 ),
               );
               Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.rate_review),
+            title: const Text('My Reviews'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const UserReviewsScreen()),
+              );
             },
           ),
           const Divider(),
