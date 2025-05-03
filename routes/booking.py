@@ -193,8 +193,13 @@ def book_turf(turf_id):
         negotiation_enabled = negotiation_enabled_value == '1'
         print(f"DEBUG: negotiation_enabled after check: {negotiation_enabled}")
         
-        # If negotiation is not enabled, ignore any proposed price
-        if not negotiation_enabled:
+        # Validate proposed price if negotiation is enabled
+        if negotiation_enabled:
+            if user_price is None or user_price <= 0:
+                flash('Please enter a valid price for negotiation (greater than 0).', 'danger')
+                return redirect(url_for('booking.book_turf', turf_id=turf_id))
+        else:
+            # If negotiation is not enabled, ignore any proposed price
             user_price = None
         
         # Initialize variables
@@ -228,8 +233,12 @@ def book_turf(turf_id):
         
         db.session.add(booking)
         
+        # Need to commit the booking first to get its ID before creating the negotiation record
+        db.session.commit()
+        
         # If negotiation is enabled, create a negotiation record regardless of price
         if negotiation_enabled:
+            # Now booking.id is available since we've committed the transaction
             negotiation = Negotiation(
                 booking_id=booking.id,
                 proposed_price=user_price,
@@ -237,8 +246,8 @@ def book_turf(turf_id):
                 message=form.message.data
             )
             db.session.add(negotiation)
-        
-        db.session.commit()
+            # Commit again to save the negotiation
+            db.session.commit()
         
         if booking.status == BookingStatus.NEGOTIATING:
             flash('Your booking request with price negotiation has been sent to the turf owner! You\'ll be able to proceed with payment once they respond.', 'success')

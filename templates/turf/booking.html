@@ -546,6 +546,30 @@
             // Update savings calculation when proposed price changes
             proposedPriceInput.addEventListener('input', function() {
                 console.log('Price input changed: ' + this.value);
+                
+                // Validate that the price is not 0 or negative
+                const price = parseFloat(this.value);
+                const submitBtn = document.querySelector('[type="submit"]');
+                
+                if (isNaN(price) || price <= 0) {
+                    // Show validation message
+                    if (!document.getElementById('price-validation-message')) {
+                        const validationMsg = document.createElement('div');
+                        validationMsg.id = 'price-validation-message';
+                        validationMsg.className = 'invalid-feedback d-block';
+                        validationMsg.textContent = 'Please enter a valid price greater than 0';
+                        this.parentNode.appendChild(validationMsg);
+                    }
+                    // Disable submit button
+                    if (submitBtn) submitBtn.disabled = true;
+                } else {
+                    // Remove validation message if exists
+                    const validationMsg = document.getElementById('price-validation-message');
+                    if (validationMsg) validationMsg.remove();
+                    // Enable submit button
+                    if (submitBtn) submitBtn.disabled = false;
+                }
+                
                 updateSavingsText();
             });
         }
