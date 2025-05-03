@@ -706,6 +706,7 @@ dependencies = [
     { name = "flask-wtf" },
     { name = "gunicorn" },
     { name = "psycopg2-binary" },
+    { name = "pyjwt" },
     { name = "stripe" },
     { name = "twilio" },
 ]
@@ -719,6 +720,7 @@ requires-dist = [
     { name = "flask-wtf", specifier = ">=1.2.2" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
+    { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "stripe", specifier = ">=12.1.0" },
     { name = "twilio", specifier = ">=9.5.2" },
 ]

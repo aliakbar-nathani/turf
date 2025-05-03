@@ -1,50 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../models/review_model.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import '../../config/app_theme.dart';
 import '../../services/review_service.dart';
-import '../../widgets/review_form_widget.dart';
+import '../../services/auth_service.dart';
+import '../auth/login_screen.dart';
+import '../../widgets/rating_bar_widget.dart';
 
 class AddReviewScreen extends StatefulWidget {
   final int turfId;
   final String turfName;
-  final Function onReviewUpdated;
-  final Review? existingReview;
+  final Function? onReviewUpdated;
   
   const AddReviewScreen({
-    Key? key,
-    required this.turfId,
+    super.key, 
+    required this.turfId, 
     required this.turfName,
-    required this.onReviewUpdated,
-    this.existingReview,
-  }) : super(key: key);
+    this.onReviewUpdated,
+  });
 
   @override
   State<AddReviewScreen> createState() => _AddReviewScreenState();
 }
 
 class _AddReviewScreenState extends State<AddReviewScreen> {
-  String? _authToken;
+  final _commentController = TextEditingController();
+  final AuthService _authService = AuthService();
+  late ReviewService _reviewService;
+  
+  bool _isLoading = false;
   bool _isSubmitting = false;
+  int _selectedRating = 5;
   String? _errorMessage;
   
   @override
   void initState() {
     super.initState();
-    _loadAuthToken();
+    _initialize();
   }
   
-  Future<void> _loadAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _initialize() async {
     setState(() {
-      _authToken = token;
+      _isLoading = true;
+    });
+    
+    final token = await _authService.getToken();
+    
+    if (token == null) {
+      _navigateToLogin();
+      return;
+    }
+    
+    _reviewService = ReviewService(authToken: token);
+    
+    setState(() {
+      _isLoading = false;
     });
   }
   
-  void _submitReview(int rating, String comment) async {
-    if (_authToken == null) {
+  void _navigateToLogin() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+  
+  Future<void> _submitReview() async {
+    // Validate fields
+    if (_selectedRating == 0) {
       setState(() {
-        _errorMessage = 'You must be logged in to submit a review';
+        _errorMessage = 'Please select a rating';
       });
       return;
     }
@@ -55,50 +85,37 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
     });
     
     try {
-      final reviewService = ReviewService(authToken: _authToken);
-      Map<String, dynamic> result;
-      
-      if (widget.existingReview != null) {
-        // Update existing review
-        result = await reviewService.updateReview(
-          reviewId: widget.existingReview!.id,
-          rating: rating,
-          comment: comment,
-        );
-      } else {
-        // Submit new review
-        result = await reviewService.submitReview(
-          turfId: widget.turfId,
-          rating: rating,
-          comment: comment,
-        );
-      }
+      final result = await _reviewService.submitReview(
+        turfId: widget.turfId,
+        rating: _selectedRating,
+        comment: _commentController.text.trim(),
+      );
       
       if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // Notify parent screen if callback provided
+        if (widget.onReviewUpdated != null) {
+          widget.onReviewUpdated!();
+        }
         
-        // Call the callback to update the parent screen
-        widget.onReviewUpdated();
-        
-        // Pop the screen after a short delay
-        Future.delayed(const Duration(milliseconds: 500), () {
-          Navigator.of(context).pop();
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Review submitted successfully'),
+              backgroundColor: AppTheme.successColor,
+            ),
+          );
+          Navigator.pop(context, true);
+        }
       } else {
         setState(() {
-          _errorMessage = result['message'];
           _isSubmitting = false;
+          _errorMessage = result['message'] ?? 'Failed to submit review';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to submit review: $e';
         _isSubmitting = false;
+        _errorMessage = 'Error: $e';
       });
     }
   }
@@ -107,54 +124,189 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingReview != null ? 'Edit Review' : 'Add Review'),
+        title: const Text('Write a Review'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.turfName,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+      body: _isLoading
+          ? Center(
+              child: SpinKitCircle(
+                color: AppTheme.primaryColor,
+                size: 50.0,
               ),
-            ),
-            const SizedBox(height: 24),
-            if (_errorMessage != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade300),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red[700]),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red[700]),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Turf name
+                  Text(
+                    widget.turfName,
+                    style: const TextStyle(
+                      fontSize: 22.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24.0),
+                  
+                  // Rating selection
+                  const Text(
+                    'Your Rating',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16.0),
+                  
+                  // Custom interactive rating bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      final rating = index + 1;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedRating = rating;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Icon(
+                            rating <= _selectedRating 
+                                ? Icons.star 
+                                : Icons.star_border,
+                            color: rating <= _selectedRating 
+                                ? Colors.amber
+                                : Colors.grey,
+                            size: 48.0,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  
+                  const SizedBox(height: 8.0),
+                  
+                  // Rating text
+                  Center(
+                    child: Text(
+                      _getRatingText(),
+                      style: TextStyle(
+                        fontSize: 16.0,
+                        color: Colors.grey[700],
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24.0),
+                  
+                  // Comment field
+                  const Text(
+                    'Your Review (Optional)',
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 8.0),
+                  
+                  TextField(
+                    controller: _commentController,
+                    maxLines: 5,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: 'Share your experience with this turf...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
+                    ),
+                  ),
+                  
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 16.0),
+                    
+                    // Error message
+                    Container(
+                      padding: const EdgeInsets.all(12.0),
+                      decoration: BoxDecoration(
+                        color: AppTheme.errorColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: AppTheme.errorColor,
+                          ),
+                          const SizedBox(width: 12.0),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                color: AppTheme.errorColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
+                  
+                  const SizedBox(height: 24.0),
+                  
+                  // Submit button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitReview,
+                      style: AppTheme.primaryButtonStyle,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12.0),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Submit Review',
+                                style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
-            ReviewFormWidget(
-              onSubmit: _submitReview,
-              submitButtonLabel: widget.existingReview != null 
-                  ? 'Update Review' 
-                  : 'Submit Review',
-              initialReview: widget.existingReview,
             ),
-          ],
-        ),
-      ),
     );
+  }
+  
+  String _getRatingText() {
+    switch (_selectedRating) {
+      case 1:
+        return 'Poor';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Good';
+      case 4:
+        return 'Very Good';
+      case 5:
+        return 'Excellent';
+      default:
+        return '';
+    }
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../config/app_theme.dart';
 import '../../models/review_model.dart';
 import '../../services/review_service.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/rating_bar_widget.dart';
-import '../../widgets/review_list_item.dart';
 import 'add_review_screen.dart';
 
 class ReviewsScreen extends StatefulWidget {
@@ -12,238 +12,136 @@ class ReviewsScreen extends StatefulWidget {
   final String turfName;
   
   const ReviewsScreen({
-    Key? key, 
-    required this.turfId,
+    super.key, 
+    required this.turfId, 
     required this.turfName,
-  }) : super(key: key);
+  });
 
   @override
   State<ReviewsScreen> createState() => _ReviewsScreenState();
 }
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
+  final AuthService _authService = AuthService();
+  late ReviewService _reviewService;
+  
   bool _isLoading = true;
-  List<Review> _reviews = [];
-  double _averageRating = 0.0;
-  int _reviewCount = 0;
-  String? _errorMessage;
-  String? _authToken;
+  bool _isLoggedIn = false;
   bool _canReview = false;
-  bool _isOwner = false;
-  String? _userRole;
+  bool _isCheckingEligibility = false;
+  
+  List<Review> _reviews = [];
+  double? _averageRating;
+  int? _reviewCount;
+  String? _errorMessage;
   
   @override
   void initState() {
     super.initState();
-    _loadAuthToken();
+    _initialize();
   }
   
-  Future<void> _loadAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
-    final userRole = prefs.getString('user_role');
+  Future<void> _initialize() async {
+    final isLoggedIn = await _authService.isLoggedIn();
+    final token = await _authService.getToken();
     
-    setState(() {
-      _authToken = token;
-      _userRole = userRole;
-      _isOwner = userRole == 'OWNER';
-    });
-    
-    await _fetchReviews();
-    
-    if (!_isOwner && _authToken != null) {
-      await _checkCanReview();
-    }
-  }
-  
-  Future<void> _fetchReviews() async {
     setState(() {
       _isLoading = true;
+      _isLoggedIn = isLoggedIn;
       _errorMessage = null;
     });
     
+    // Initialize review service with or without token
+    _reviewService = ReviewService(authToken: token);
+    
+    // Load reviews
+    await _loadReviews();
+    
+    // Check if user can review
+    if (_isLoggedIn) {
+      await _checkReviewEligibility();
+    }
+  }
+  
+  Future<void> _loadReviews() async {
     try {
-      final reviewService = ReviewService(authToken: _authToken);
-      final result = await reviewService.getTurfReviews(widget.turfId);
+      final result = await _reviewService.getTurfReviews(widget.turfId);
       
-      if (result['success']) {
-        setState(() {
-          _reviews = result['reviews'];
-          _averageRating = result['averageRating'] ?? 0.0;
-          _reviewCount = result['reviewCount'] ?? 0;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _errorMessage = result['message'];
-          _isLoading = false;
-        });
-      }
+      setState(() {
+        _isLoading = false;
+        
+        if (result['success']) {
+          _reviews = List<Review>.from(result['reviews']);
+          _averageRating = result['averageRating'];
+          _reviewCount = result['reviewCount'];
+        } else {
+          _errorMessage = result['message'] ?? 'Failed to load reviews';
+        }
+      });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load reviews: $e';
         _isLoading = false;
+        _errorMessage = 'Error: $e';
       });
     }
   }
   
-  Future<void> _checkCanReview() async {
+  Future<void> _checkReviewEligibility() async {
+    if (!_isLoggedIn) return;
+    
+    setState(() {
+      _isCheckingEligibility = true;
+    });
+    
     try {
-      final reviewService = ReviewService(authToken: _authToken);
-      final result = await reviewService.canReviewTurf(widget.turfId);
+      final result = await _reviewService.canReviewTurf(widget.turfId);
       
-      if (result['success']) {
-        setState(() {
-          _canReview = result['canReview'];
-        });
-      }
+      setState(() {
+        _isCheckingEligibility = false;
+        _canReview = result['canReview'] ?? false;
+      });
     } catch (e) {
-      // We don't need to show an error if this fails
-      print('Failed to check review eligibility: $e');
+      setState(() {
+        _isCheckingEligibility = false;
+        _canReview = false;
+      });
     }
   }
   
-  Future<void> _deleteReview(Review review) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Review'),
-        content: const Text('Are you sure you want to delete this review?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    ) ?? false;
-    
-    if (!confirmed) return;
-    
-    final reviewService = ReviewService(authToken: _authToken);
-    final result = await reviewService.deleteReview(review.id);
-    
-    if (result['success']) {
+  void _navigateToAddReview() async {
+    if (!_isLoggedIn) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.green,
+        const SnackBar(
+          content: Text('Please log in to write a review'),
         ),
       );
-      _fetchReviews();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: Colors.red,
-        ),
-      );
+      return;
     }
-  }
-  
-  void _editReview(Review review) {
-    Navigator.push(
+    
+    if (!_canReview) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You can only review turfs you have booked and played on'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AddReviewScreen(
           turfId: widget.turfId,
           turfName: widget.turfName,
-          existingReview: review,
-          onReviewUpdated: () {
-            _fetchReviews();
-          },
         ),
       ),
     );
-  }
-  
-  void _replyToReview(Review review) {
-    // Show dialog to enter response
-    final responseController = TextEditingController();
     
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reply to Review'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RatingBarWidget(rating: review.rating.toDouble()),
-            const SizedBox(height: 8),
-            Text(review.comment),
-            const SizedBox(height: 16),
-            TextField(
-              controller: responseController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Your Response',
-                hintText: 'Enter your response to this review...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (responseController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter a response')),
-                );
-                return;
-              }
-              
-              Navigator.of(context).pop();
-              _submitResponse(review, responseController.text.trim());
-            },
-            child: const Text('Submit'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  Future<void> _submitResponse(Review review, String response) async {
-    try {
-      final reviewService = ReviewService(authToken: _authToken);
-      final result = await reviewService.respondToReview(
-        reviewId: review.id,
-        response: response,
-      );
-      
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _fetchReviews();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to submit response: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // Reload reviews if a new review was added
+    if (result == true) {
+      _loadReviews();
+      _checkReviewEligibility();
     }
   }
   
@@ -251,142 +149,299 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reviews'),
+        title: Text('Reviews for ${widget.turfName}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadReviews,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(child: Text(_errorMessage!))
-              : CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                              widget.turfName,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildRatingSummary(),
-                            const Divider(height: 32),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final review = _reviews[index];
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                            child: ReviewListItem(
-                              review: review,
-                              isOwner: _isOwner,
-                              onReplyPressed: _isOwner ? _replyToReview : null,
-                              onEditPressed: !_isOwner && review.userId.toString() == _getUserId() 
-                                  ? _editReview : null,
-                              onDeletePressed: !_isOwner && review.userId.toString() == _getUserId() 
-                                  ? _deleteReview : null,
-                            ),
-                          );
-                        },
-                        childCount: _reviews.length,
-                      ),
-                    ),
-                    SliverToBoxAdapter(
-                      child: _reviews.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(24.0),
-                              child: Center(
-                                child: Text(
-                                  'No reviews yet. Be the first to review this turf!',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            )
-                          : const SizedBox(height: 80),
-                    ),
-                  ],
-                ),
-      floatingActionButton: (_canReview && !_isOwner && _authToken != null)
-          ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AddReviewScreen(
-                      turfId: widget.turfId,
-                      turfName: widget.turfName,
-                      onReviewUpdated: () {
-                        _fetchReviews();
-                        _checkCanReview();
-                      },
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.rate_review),
-              label: const Text('Write a Review'),
+      floatingActionButton: _isLoggedIn && _canReview
+          ? FloatingActionButton(
+              onPressed: _navigateToAddReview,
               backgroundColor: AppTheme.primaryColor,
+              child: const Icon(Icons.rate_review),
             )
           : null,
+      body: _isLoading
+          ? Center(
+              child: SpinKitCircle(
+                color: AppTheme.primaryColor,
+                size: 50.0,
+              ),
+            )
+          : _buildContent(),
     );
   }
   
-  Widget _buildRatingSummary() {
-    return Column(
-      children: [
-        Row(
+  Widget _buildContent() {
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              _averageRating.toStringAsFixed(1),
-              style: const TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-              ),
+              _errorMessage!,
+              style: TextStyle(color: AppTheme.errorColor),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RatingBarWidget(
-                  rating: _averageRating,
-                  size: 24,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$_reviewCount ${_reviewCount == 1 ? 'review' : 'reviews'}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadReviews,
+              style: AppTheme.primaryButtonStyle,
+              child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Column(
+      children: [
+        // Rating summary
+        if (_averageRating != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
-          ],
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      _averageRating!.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RatingBarWidget(
+                            rating: _averageRating!,
+                            size: 24,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Based on $_reviewCount ${_reviewCount == 1 ? 'review' : 'reviews'}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                if (_isLoggedIn && !_canReview && !_isCheckingEligibility) ...[
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'You can review this turf after you have completed a booking.',
+                    style: TextStyle(
+                      color: Colors.grey[700],
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                
+                if (_isLoggedIn && _canReview) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _navigateToAddReview,
+                      icon: const Icon(Icons.rate_review),
+                      label: const Text('Write a Review'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: BorderSide(color: AppTheme.primaryColor),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        
+        // Reviews list
+        Expanded(
+          child: _reviews.isEmpty
+              ? _buildEmptyState()
+              : ListView.builder(
+                  padding: const EdgeInsets.all(0),
+                  itemCount: _reviews.length,
+                  itemBuilder: (context, index) {
+                    final review = _reviews[index];
+                    return _buildReviewItem(review);
+                  },
+                ),
         ),
       ],
     );
   }
   
-  String? _getUserId() {
-    try {
-      final prefs = SharedPreferences.getInstance();
-      return prefs.then((value) => value.getString('user_id'));
-    } catch (e) {
-      return null;
-    }
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.rate_review_outlined,
+            size: 80,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No Reviews Yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Be the first to review ${widget.turfName}',
+            style: const TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          if (_isLoggedIn && _canReview) ...[
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _navigateToAddReview,
+              icon: const Icon(Icons.rate_review),
+              label: const Text('Write a Review'),
+              style: AppTheme.primaryButtonStyle,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildReviewItem(Review review) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // User info and date
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                review.username,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                review.createdAt,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Rating
+          RatingBarWidget(
+            rating: review.rating.toDouble(),
+            size: 18,
+          ),
+          
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            
+            // Comment
+            Text(
+              review.comment!,
+              style: const TextStyle(
+                fontSize: 15,
+              ),
+            ),
+          ],
+          
+          if (review.ownerResponse != null && review.ownerResponse!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            
+            // Owner response
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.store,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Response from owner',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    review.ownerResponse!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
