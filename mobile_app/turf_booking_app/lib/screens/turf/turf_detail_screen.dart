@@ -641,16 +641,30 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
+                        const Icon(
+                          Icons.rate_review_outlined,
+                          size: 60,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
                         const Text(
                           'No reviews yet',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -664,17 +678,24 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _navigateToAddReview,
-                          icon: const Icon(Icons.rate_review),
-                          label: const Text('Write a Review'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                        const SizedBox(height: 20),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoggedIn && _canReview ? _navigateToAddReview : 
+                                       _isLoggedIn ? () => _showReviewEligibilityInfo() : _showLoginPrompt,
+                            icon: const Icon(Icons.rate_review),
+                            label: const Text('Write a Review'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
                             ),
-                            backgroundColor: AppTheme.primaryColor,
                           ),
                         ),
                         if (_isLoggedIn && _isLoadingReviewEligibility)
@@ -753,6 +774,42 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to display rating description based on score
+  String _getRatingText(double rating) {
+    if (rating >= 4.5) return 'Excellent';
+    if (rating >= 3.5) return 'Very Good';
+    if (rating >= 2.5) return 'Good';
+    if (rating >= 1.5) return 'Fair';
+    return 'Poor';
+  }
+  
+  // Show information about review eligibility
+  void _showReviewEligibilityInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cannot Review Yet'),
+        content: const Text(
+          'You can only review turfs after you have completed a booking and played there.\n\n'
+          'This helps ensure reviews are from actual customers.'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _bookTurf();
+            },
+            child: const Text('Book This Turf'),
           ),
         ],
       ),
