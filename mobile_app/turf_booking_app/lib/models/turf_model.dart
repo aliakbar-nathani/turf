@@ -1,124 +1,103 @@
 class Turf {
   final int id;
   final String name;
-  final String description;
+  final String? description;
   final String address;
   final String city;
   final String state;
   final String country;
-  final String? postalCode;
+  final String postalCode;
   final double basePricePerHour;
-  final List<String> features;
+  final List<String>? features;
   final String? size;
-  final bool indoor;
-  final bool hasParking;
-  final bool hasChangingRoom;
-  final bool hasShower;
-  final bool hasFloodlights;
-  final bool hasEquipment;
-  final bool hasRefreshments;
+  final bool? indoor;
+  final bool? hasParking;
+  final bool? hasChangingRoom;
+  final bool? hasShower;
+  final bool? hasFloodlights;
+  final bool? hasEquipment;
   final String? surfaceType;
-  final String imageUrl;
-  final List<String> additionalImages;
-  final double? averageRating;
-  final int? reviewCount;
-  final int ownerId;
-  final String ownerName;
-  final bool isFavorite;
+  final String? imageUrl;
+  final List<String>? additionalImages;
+  final double? rating;
+  final int? reviewsCount;
+  final int? ownerId;
+  final String createdAt;
+  final String? updatedAt;
 
   Turf({
     required this.id,
     required this.name,
-    required this.description,
+    this.description,
     required this.address,
     required this.city,
     required this.state,
     required this.country,
-    this.postalCode,
+    required this.postalCode,
     required this.basePricePerHour,
-    required this.features,
+    this.features,
     this.size,
-    required this.indoor,
-    required this.hasParking,
-    required this.hasChangingRoom,
-    required this.hasShower,
-    required this.hasFloodlights,
-    required this.hasEquipment,
-    required this.hasRefreshments,
+    this.indoor,
+    this.hasParking,
+    this.hasChangingRoom,
+    this.hasShower,
+    this.hasFloodlights,
+    this.hasEquipment,
     this.surfaceType,
-    required this.imageUrl,
-    required this.additionalImages,
-    this.averageRating,
-    this.reviewCount,
-    required this.ownerId,
-    required this.ownerName,
-    this.isFavorite = false,
+    this.imageUrl,
+    this.additionalImages,
+    this.rating,
+    this.reviewsCount,
+    this.ownerId,
+    required this.createdAt,
+    this.updatedAt,
   });
 
   factory Turf.fromJson(Map<String, dynamic> json) {
-    // Handle the owner data which might be in different formats
-    int ownerId = 0;
-    String ownerName = 'Unknown';
-    
-    if (json['owner'] != null) {
-      // Handle when owner is an object with id and username
-      ownerId = json['owner']['id'] ?? 0;
-      ownerName = json['owner']['username'] ?? 'Unknown';
-    } else {
-      // Handle when owner_id and owner_name are separate fields
-      ownerId = json['owner_id'] ?? 0;
-      ownerName = json['owner_name'] ?? 'Unknown';
+    List<String>? features;
+    if (json['features'] != null) {
+      if (json['features'] is String) {
+        features = (json['features'] as String).split(',').map((e) => e.trim()).toList();
+      } else if (json['features'] is List) {
+        features = (json['features'] as List).map((e) => e.toString()).toList();
+      }
     }
-    
-    // Handle images in different formats
-    String imageUrl = '';
-    List<String> additionalImagesList = [];
-    
-    if (json['image'] != null) {
-      // Single image field
-      imageUrl = json['image'];
-    } else if (json['image_url'] != null) {
-      // image_url field
-      imageUrl = json['image_url'];
-    } else if (json['primary_image'] != null) {
-      // primary_image field
-      imageUrl = json['primary_image'];
+
+    List<String>? additionalImages;
+    if (json['additional_images'] != null) {
+      if (json['additional_images'] is String) {
+        additionalImages = (json['additional_images'] as String).split(',').map((e) => e.trim()).toList();
+      } else if (json['additional_images'] is List) {
+        additionalImages = (json['additional_images'] as List).map((e) => e.toString()).toList();
+      }
     }
-    
-    // Handle additional images
-    if (json['images'] != null) {
-      additionalImagesList = List<String>.from(json['images']);
-    } else if (json['additional_images'] != null) {
-      additionalImagesList = List<String>.from(json['additional_images']);
-    }
-    
+
     return Turf(
       id: json['id'],
       name: json['name'],
-      description: json['description'] ?? '',
+      description: json['description'],
       address: json['address'],
       city: json['city'],
       state: json['state'],
       country: json['country'],
-      postalCode: json['postal_code'] ?? '',
-      basePricePerHour: json['base_price_per_hour']?.toDouble() ?? 0.0,
-      features: List<String>.from(json['features'] ?? []),
+      postalCode: json['postal_code'],
+      basePricePerHour: json['base_price_per_hour'].toDouble(),
+      features: features,
       size: json['size'],
-      indoor: json['indoor'] ?? false,
-      hasParking: json['has_parking'] ?? false,
-      hasChangingRoom: json['has_changing_room'] ?? false,
-      hasShower: json['has_shower'] ?? false,
-      hasFloodlights: json['has_floodlights'] ?? false,
-      hasEquipment: json['has_equipment'] ?? false,
-      hasRefreshments: json['has_refreshments'] ?? false,
+      indoor: json['indoor'],
+      hasParking: json['has_parking'],
+      hasChangingRoom: json['has_changing_room'],
+      hasShower: json['has_shower'],
+      hasFloodlights: json['has_floodlights'],
+      hasEquipment: json['has_equipment'],
       surfaceType: json['surface_type'],
-      imageUrl: imageUrl,
-      additionalImages: additionalImagesList,
-      averageRating: json['avg_rating']?.toDouble() ?? json['average_rating']?.toDouble(),
-      reviewCount: json['rating_count'] ?? json['review_count'] ?? 0,
-      ownerId: ownerId,
-      ownerName: ownerName,
-      isFavorite: json['is_favorite'] ?? false,
+      imageUrl: json['image_url'],
+      additionalImages: additionalImages,
+      rating: json['rating']?.toDouble(),
+      reviewsCount: json['reviews_count'],
+      ownerId: json['owner_id'],
+      createdAt: json['created_at'],
+      updatedAt: json['updated_at'],
     );
   }
 
@@ -133,7 +112,7 @@ class Turf {
       'country': country,
       'postal_code': postalCode,
       'base_price_per_hour': basePricePerHour,
-      'features': features,
+      'features': features?.join(', '),
       'size': size,
       'indoor': indoor,
       'has_parking': hasParking,
@@ -141,15 +120,14 @@ class Turf {
       'has_shower': hasShower,
       'has_floodlights': hasFloodlights,
       'has_equipment': hasEquipment,
-      'has_refreshments': hasRefreshments,
       'surface_type': surfaceType,
       'image_url': imageUrl,
-      'additional_images': additionalImages,
-      'average_rating': averageRating,
-      'review_count': reviewCount,
+      'additional_images': additionalImages?.join(', '),
+      'rating': rating,
+      'reviews_count': reviewsCount,
       'owner_id': ownerId,
-      'owner_name': ownerName,
-      'is_favorite': isFavorite,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 }

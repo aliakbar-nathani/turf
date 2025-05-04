@@ -7,8 +7,8 @@ class Negotiation {
   final double currentAmount;
   final String status;
   final String? message;
-  final DateTime createdAt;
-  final DateTime? updatedAt;
+  final String createdAt;
+  final String? updatedAt;
 
   Negotiation({
     required this.id,
@@ -33,8 +33,8 @@ class Negotiation {
       currentAmount: json['current_amount'].toDouble(),
       status: json['status'],
       message: json['message'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      createdAt: json['created_at'],
+      updatedAt: json['updated_at'],
     );
   }
 
@@ -48,8 +48,8 @@ class Negotiation {
       'current_amount': currentAmount,
       'status': status,
       'message': message,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 }

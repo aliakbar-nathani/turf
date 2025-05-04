@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../config/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/analytics_service.dart';
@@ -12,89 +10,100 @@ class OwnerAnalyticsScreen extends StatefulWidget {
   State<OwnerAnalyticsScreen> createState() => _OwnerAnalyticsScreenState();
 }
 
-class _OwnerAnalyticsScreenState extends State<OwnerAnalyticsScreen> {
-  final AuthService _authService = AuthService();
-  late AnalyticsService _analyticsService;
-  
+class _OwnerAnalyticsScreenState extends State<OwnerAnalyticsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _isLoading = true;
   String? _errorMessage;
   
   // Analytics data
-  Map<String, dynamic> _revenueData = {};
-  Map<String, dynamic> _bookingData = {};
-  Map<String, dynamic> _turfPerformance = {};
+  Map<String, dynamic>? _bookingAnalytics;
+  Map<String, dynamic>? _turfPerformance;
+  Map<String, dynamic>? _negotiationStats;
   
-  String _selectedTimeRange = 'month'; // week, month, year
+  // Filters
+  String _periodFilter = 'month';
+  final List<Map<String, dynamic>> _periodOptions = [
+    {'value': 'week', 'label': 'Week'},
+    {'value': 'month', 'label': 'Month'},
+    {'value': 'quarter', 'label': 'Quarter'},
+    {'value': 'year', 'label': 'Year'},
+  ];
   
   @override
   void initState() {
     super.initState();
-    _initialize();
-  }
-  
-  Future<void> _initialize() async {
-    final token = await _authService.getToken();
-    setState(() {
-      _analyticsService = AnalyticsService(authToken: token);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      // Load data for the selected tab if not already loaded
+      _loadDataForCurrentTab();
     });
-    
-    _loadAnalytics();
+    _loadDataForCurrentTab();
   }
   
-  Future<void> _loadAnalytics() async {
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _loadDataForCurrentTab() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     
     try {
-      // Get revenue data
-      final revenueResult = await _analyticsService.getRevenueData(timeRange: _selectedTimeRange);
+      final authService = AuthService();
+      final token = await authService.getToken();
+      final analyticsService = AnalyticsService(authToken: token);
       
-      // Get booking data
-      final bookingResult = await _analyticsService.getBookingData(timeRange: _selectedTimeRange);
-      
-      // Get turf performance data
-      final turfResult = await _analyticsService.getTurfPerformanceData(timeRange: _selectedTimeRange);
-      
-      if (!mounted) return;
-      
-      setState(() {
-        _isLoading = false;
-        
-        if (revenueResult['success']) {
-          _revenueData = revenueResult['data'];
-        }
-        
-        if (bookingResult['success']) {
-          _bookingData = bookingResult['data'];
-        }
-        
-        if (turfResult['success']) {
-          _turfPerformance = turfResult['data'];
-        }
-        
-        // Error handling
-        if (!revenueResult['success'] && !bookingResult['success'] && !turfResult['success']) {
-          _errorMessage = 'Failed to load analytics data';
-        }
-      });
+      switch (_tabController.index) {
+        case 0: // Bookings
+          final result = await analyticsService.getBookingAnalytics(
+            period: _periodFilter,
+          );
+          
+          setState(() {
+            _isLoading = false;
+            if (result['success']) {
+              _bookingAnalytics = result['data'];
+            } else {
+              _errorMessage = result['message'];
+            }
+          });
+          break;
+          
+        case 1: // Turf Performance
+          final result = await analyticsService.getTurfPerformance();
+          
+          setState(() {
+            _isLoading = false;
+            if (result['success']) {
+              _turfPerformance = result['data'];
+            } else {
+              _errorMessage = result['message'];
+            }
+          });
+          break;
+          
+        case 2: // Negotiations
+          final result = await analyticsService.getNegotiationStats();
+          
+          setState(() {
+            _isLoading = false;
+            if (result['success']) {
+              _negotiationStats = result['data'];
+            } else {
+              _errorMessage = result['message'];
+            }
+          });
+          break;
+      }
     } catch (e) {
-      if (!mounted) return;
-      
       setState(() {
         _isLoading = false;
-        _errorMessage = 'An error occurred: $e';
+        _errorMessage = 'Error loading analytics data: $e';
       });
-    }
-  }
-  
-  void _changeTimeRange(String range) {
-    if (_selectedTimeRange != range) {
-      setState(() {
-        _selectedTimeRange = range;
-      });
-      _loadAnalytics();
     }
   }
   
@@ -102,491 +111,791 @@ class _OwnerAnalyticsScreenState extends State<OwnerAnalyticsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadAnalytics,
-            tooltip: 'Refresh',
-          ),
+        title: const Text('Analytics & Insights'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Bookings'),
+            Tab(text: 'Turf Performance'),
+            Tab(text: 'Negotiations'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildBookingAnalyticsTab(),
+          _buildTurfPerformanceTab(),
+          _buildNegotiationStatsTab(),
         ],
       ),
-      body: _isLoading
-          ? Center(
-              child: SpinKitCircle(
-                color: AppTheme.primaryColor,
-                size: 50.0,
-              ),
-            )
-          : _errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Error: $_errorMessage',
-                        style: TextStyle(color: AppTheme.errorColor),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadAnalytics,
-                        style: AppTheme.primaryButtonStyle,
-                        child: const Text('Try Again'),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadAnalytics,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Time range selector
-                        _buildTimeRangeSelector(),
-                        const SizedBox(height: 24.0),
-                        
-                        // Revenue summary
-                        _buildRevenueSummary(),
-                        const SizedBox(height: 32.0),
-                        
-                        // Booking chart
-                        _buildBookingChart(),
-                        const SizedBox(height: 32.0),
-                        
-                        // Turf performance
-                        _buildTurfPerformance(),
-                        const SizedBox(height: 32.0),
-                        
-                        // Export button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Export feature coming soon')),
-                              );
-                            },
-                            icon: const Icon(Icons.download),
-                            label: const Text('Export Data'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16.0),
-                      ],
-                    ),
-                  ),
-                ),
     );
   }
   
-  Widget _buildTimeRangeSelector() {
+  Widget _buildBookingAnalyticsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_errorMessage != null) {
+      return _buildErrorView();
+    }
+    
+    final data = _bookingAnalytics;
+    if (data == null) {
+      return const Center(child: Text('No data available'));
+    }
+    
+    final bookingsOverTime = data['bookings_over_time'] as List?;
+    
+    return RefreshIndicator(
+      onRefresh: _loadDataForCurrentTab,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Period filter
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Time Period:',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _periodFilter,
+                        items: _periodOptions.map((option) {
+                          return DropdownMenuItem<String>(
+                            value: option['value'],
+                            child: Text(option['label']),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _periodFilter = value;
+                            });
+                            _loadDataForCurrentTab();
+                          }
+                        },
+                        decoration: const InputDecoration(
+                          isDense: true,
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Key metrics
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Total Bookings',
+                    '${data['total_bookings']}',
+                    Icons.calendar_today,
+                    Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Revenue',
+                    '\$${data['total_revenue'].toStringAsFixed(2)}',
+                    Icons.attach_money,
+                    Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Bookings over time chart
+            if (bookingsOverTime != null && bookingsOverTime.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bookings & Revenue Over Time',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 200,
+                        child: _buildSimpleBarChart(bookingsOverTime),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+            const SizedBox(height: 16),
+            
+            // Average booking value
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.trending_up,
+                      color: Colors.purple,
+                      size: 36,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Average Booking Value',
+                            style: TextStyle(
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '\$${data['average_booking_value'].toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTurfPerformanceTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_errorMessage != null) {
+      return _buildErrorView();
+    }
+    
+    final data = _turfPerformance;
+    if (data == null) {
+      return const Center(child: Text('No data available'));
+    }
+    
+    final turfs = data['turfs'] as List?;
+    final popularDays = data['most_popular_days'] as List?;
+    final popularTimes = data['most_popular_times'] as List?;
+    
+    return RefreshIndicator(
+      onRefresh: _loadDataForCurrentTab,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Turf performance comparison
+            if (turfs != null && turfs.isNotEmpty) ...[
+              const Text(
+                'Turf Performance',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...turfs.map((turf) => _buildTurfPerformanceCard(turf)).toList(),
+              const SizedBox(height: 24),
+            ],
+            
+            // Popular booking days
+            if (popularDays != null && popularDays.isNotEmpty) ...[
+              const Text(
+                'Most Popular Days',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: popularDays.map((day) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            Text(
+                              day['day'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: LinearProgressIndicator(
+                                value: day['bookings'] / (popularDays.map((d) => d['bookings']).reduce((a, b) => a > b ? a : b)),
+                                backgroundColor: Colors.grey[200],
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${day['bookings']} bookings',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+            
+            // Popular booking times
+            if (popularTimes != null && popularTimes.isNotEmpty) ...[
+              const Text(
+                'Most Popular Time Slots',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: popularTimes.map((time) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 100,
+                              child: Text(
+                                time['time'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: LinearProgressIndicator(
+                                value: time['bookings'] / (popularTimes.map((t) => t['bookings']).reduce((a, b) => a > b ? a : b)),
+                                backgroundColor: Colors.grey[200],
+                                color: Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${time['bookings']} bookings',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildNegotiationStatsTab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_errorMessage != null) {
+      return _buildErrorView();
+    }
+    
+    final data = _negotiationStats;
+    if (data == null) {
+      return const Center(child: Text('No data available'));
+    }
+    
+    return RefreshIndicator(
+      onRefresh: _loadDataForCurrentTab,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Key metrics
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Total Negotiations',
+                    '${data['total_negotiations']}',
+                    Icons.handshake,
+                    Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Conversion Rate',
+                    '${data['conversion_rate'].toStringAsFixed(1)}%',
+                    Icons.trending_up,
+                    Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMetricCard(
+                    'Avg. Discount',
+                    '${data['average_discount'].toStringAsFixed(1)}%',
+                    Icons.trending_down,
+                    Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMetricCard(
+                    'Revenue Impact',
+                    '\$${data['revenue_impact'].toStringAsFixed(2)}',
+                    Icons.attach_money,
+                    data['revenue_impact'] >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Negotiation status breakdown
+            const Text(
+              'Negotiation Outcomes',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildNegotiationStatusRow(
+                      'Accepted',
+                      data['accepted'],
+                      data['total_negotiations'],
+                      Colors.green,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildNegotiationStatusRow(
+                      'Rejected',
+                      data['rejected'],
+                      data['total_negotiations'],
+                      Colors.red,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildNegotiationStatusRow(
+                      'Counter Offered',
+                      data['counter_offered'],
+                      data['total_negotiations'],
+                      Colors.blue,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildNegotiationStatusRow(
+                      'Pending',
+                      data['pending'],
+                      data['total_negotiations'],
+                      Colors.orange,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Suggestions based on data
+            Card(
+              color: Colors.blue[50],
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb,
+                          color: Colors.amber[800],
+                          size: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Insights & Suggestions',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      data['conversion_rate'] < 50
+                          ? 'Consider being more flexible with your pricing. Your conversion rate is below 50%, which might indicate your pricing strategy could be adjusted.'
+                          : 'Your negotiation strategy is working well with a ${data['conversion_rate'].toStringAsFixed(1)}% conversion rate. Consider analyzing which turfs have the most successful negotiations.',
+                      style: const TextStyle(
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'The average discount you\'re giving is ${data['average_discount'].toStringAsFixed(1)}%. ' +
+                      (data['average_discount'] > 15
+                          ? 'This is relatively high, which might impact your profitability. Consider setting slightly higher base prices.'
+                          : 'This is a reasonable discount that helps close deals without significantly impacting your revenue.'),
+                      style: const TextStyle(
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadDataForCurrentTab,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMetricCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildTimeRangeButton('Week', 'week'),
-            _buildTimeRangeButton('Month', 'month'),
-            _buildTimeRangeButton('Year', 'year'),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildTimeRangeButton(String label, String value) {
-    return TextButton(
-      onPressed: () => _changeTimeRange(value),
-      style: TextButton.styleFrom(
-        foregroundColor: _selectedTimeRange == value 
-            ? AppTheme.primaryColor 
-            : Colors.grey,
-        backgroundColor: _selectedTimeRange == value 
-            ? AppTheme.primaryColor.withOpacity(0.1) 
-            : null,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.0),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontWeight: _selectedTimeRange == value 
-              ? FontWeight.bold 
-              : FontWeight.normal,
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildRevenueSummary() {
-    // Sample data - in a real app, this would come from the API
-    final totalRevenue = _revenueData['total_revenue'] ?? 0.0;
-    final comparedToLastPeriod = _revenueData['compared_to_last_period'] ?? 0.0;
-    final isIncrease = comparedToLastPeriod >= 0;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Revenue Summary',
-          style: TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16.0),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text(
-                      'Total Revenue',
-                      style: TextStyle(
-                        fontSize: 16.0,
-                      ),
-                    ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      '(${_getTimeRangeLabel()})',
-                      style: TextStyle(
-                        fontSize: 14.0,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  '\$${totalRevenue.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Row(
-                  children: [
-                    Icon(
-                      isIncrease ? Icons.arrow_upward : Icons.arrow_downward,
-                      size: 16.0,
-                      color: isIncrease ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 4.0),
-                    Text(
-                      '${comparedToLastPeriod.abs().toStringAsFixed(1)}% ${isIncrease ? 'increase' : 'decrease'} from last ${_selectedTimeRange}',
-                      style: TextStyle(
-                        fontSize: 14.0,
-                        color: isIncrease ? Colors.green : Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            Icon(
+              icon,
+              color: color,
+              size: 28,
             ),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildBookingChart() {
-    // Sample data - in a real app, this would come from the API
-    final completedBookings = _bookingData['completed'] ?? 0;
-    final pendingBookings = _bookingData['pending'] ?? 0;
-    final cancelledBookings = _bookingData['cancelled'] ?? 0;
-    final totalBookings = completedBookings + pendingBookings + cancelledBookings;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Booking Overview',
-          style: TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16.0),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 180,
-                  child: totalBookings > 0
-                      ? PieChart(
-                          PieChartData(
-                            sectionsSpace: 2,
-                            centerSpaceRadius: 50,
-                            sections: [
-                              PieChartSectionData(
-                                color: Colors.green,
-                                value: completedBookings.toDouble(),
-                                title: '${((completedBookings / totalBookings) * 100).round()}%',
-                                radius: 60,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              PieChartSectionData(
-                                color: Colors.orange,
-                                value: pendingBookings.toDouble(),
-                                title: '${((pendingBookings / totalBookings) * 100).round()}%',
-                                radius: 60,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              PieChartSectionData(
-                                color: Colors.red,
-                                value: cancelledBookings.toDouble(),
-                                title: '${((cancelledBookings / totalBookings) * 100).round()}%',
-                                radius: 60,
-                                titleStyle: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : const Center(
-                          child: Text(
-                            'No booking data available',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16.0,
-                            ),
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 16.0),
-                // Legend
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildLegendItem('Completed', Colors.green, completedBookings),
-                    _buildLegendItem('Pending', Colors.orange, pendingBookings),
-                    _buildLegendItem('Cancelled', Colors.red, cancelledBookings),
-                  ],
-                ),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildLegendItem(String label, Color color, int count) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '$label ($count)',
-          style: const TextStyle(fontSize: 12),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildTurfPerformance() {
-    // Sample data - in a real app, this would come from the API
-    final turfStats = _turfPerformance['turfs'] ?? [];
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Turf Performance',
-          style: TextStyle(
-            fontSize: 18.0,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16.0),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: turfStats.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No turf performance data available',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16.0,
-                      ),
-                    ),
-                  )
-                : Column(
-                    children: [
-                      for (int i = 0; i < turfStats.length; i++)
-                        _buildTurfStatItem(turfStats[i], i == turfStats.length - 1),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildTurfStatItem(Map<String, dynamic> turfStat, bool isLast) {
-    final name = turfStat['name'] ?? 'Unknown Turf';
-    final bookingCount = turfStat['booking_count'] ?? 0;
-    final revenue = turfStat['revenue'] ?? 0.0;
-    final occupancyRate = turfStat['occupancy_rate'] ?? 0.0;
-    
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16.0,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8.0),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Bookings',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              '$bookingCount',
-                              style: const TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Revenue',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              '\$${revenue.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Occupancy',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              '${occupancyRate.toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
-        if (!isLast) ...[
-          const SizedBox(height: 16.0),
-          const Divider(),
-          const SizedBox(height: 16.0),
+      ),
+    );
+  }
+  
+  Widget _buildTurfPerformanceCard(Map<String, dynamic> turf) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              turf['name'],
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTurfStat(
+                    'Bookings',
+                    '${turf['bookings_count']}',
+                    Icons.calendar_today,
+                  ),
+                ),
+                Expanded(
+                  child: _buildTurfStat(
+                    'Revenue',
+                    '\$${turf['revenue'].toStringAsFixed(2)}',
+                    Icons.attach_money,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTurfStat(
+                    'Rating',
+                    '${turf['rating']}',
+                    Icons.star,
+                  ),
+                ),
+                Expanded(
+                  child: _buildTurfStat(
+                    'Occupancy',
+                    '${turf['occupancy_rate'].toStringAsFixed(1)}%',
+                    Icons.access_time,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTurfStat(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 16,
+            color: Colors.grey[600],
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+  
+  Widget _buildNegotiationStatusRow(String status, int count, int total, Color color) {
+    final percentage = total > 0 ? (count / total * 100) : 0.0;
+    
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            status,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Stack(
+            children: [
+              Container(
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              FractionallySizedBox(
+                widthFactor: percentage / 100,
+                child: Container(
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 80,
+          child: Text(
+            '$count (${percentage.toStringAsFixed(1)}%)',
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ],
     );
   }
   
-  String _getTimeRangeLabel() {
-    switch (_selectedTimeRange) {
-      case 'week':
-        return 'This Week';
-      case 'month':
-        return 'This Month';
-      case 'year':
-        return 'This Year';
-      default:
-        return 'This Month';
+  Widget _buildSimpleBarChart(List bookingsOverTime) {
+    // Since this is a simplified visualization without a charting library
+    // We'll create a basic representation using Containers
+    
+    // Find the maximum values for scaling
+    double maxCount = 0;
+    double maxRevenue = 0;
+    
+    for (final entry in bookingsOverTime) {
+      if (entry['count'] > maxCount) {
+        maxCount = entry['count'].toDouble();
+      }
+      if (entry['revenue'] > maxRevenue) {
+        maxRevenue = entry['revenue'].toDouble();
+      }
     }
+    
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: bookingsOverTime.map((entry) {
+        final count = entry['count'];
+        final revenue = entry['revenue'];
+        final date = entry['date'].toString().substring(5); // MM-DD format
+        
+        return Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                height: 100 * (revenue / maxRevenue),
+                width: 12,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                height: 100 * (count / maxCount),
+                width: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(4),
+                    topRight: Radius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                date,
+                style: const TextStyle(
+                  fontSize: 10,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
   }
 }

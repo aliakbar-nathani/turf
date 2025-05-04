@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../../config/app_theme.dart';
-import '../../models/negotiation_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/auth_service.dart';
+import '../../models/negotiation_model.dart';
 
 class OwnerNegotiationsScreen extends StatefulWidget {
   const OwnerNegotiationsScreen({super.key});
@@ -12,36 +11,14 @@ class OwnerNegotiationsScreen extends StatefulWidget {
   State<OwnerNegotiationsScreen> createState() => _OwnerNegotiationsScreenState();
 }
 
-class _OwnerNegotiationsScreenState extends State<OwnerNegotiationsScreen> with SingleTickerProviderStateMixin {
-  final AuthService _authService = AuthService();
-  late BookingService _bookingService;
-  
+class _OwnerNegotiationsScreenState extends State<OwnerNegotiationsScreen> {
   bool _isLoading = true;
+  List<Negotiation> _negotiations = [];
   String? _errorMessage;
-  List<Negotiation> _pendingNegotiations = [];
-  List<Negotiation> _completedNegotiations = [];
-  
-  late TabController _tabController;
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _initialize();
-  }
-  
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-  
-  Future<void> _initialize() async {
-    final token = await _authService.getToken();
-    setState(() {
-      _bookingService = BookingService(authToken: token);
-    });
-    
     _loadNegotiations();
   }
   
@@ -52,270 +29,225 @@ class _OwnerNegotiationsScreenState extends State<OwnerNegotiationsScreen> with 
     });
     
     try {
-      // Get owner's negotiations
-      final result = await _bookingService.getOwnerNegotiations();
+      final authService = AuthService();
+      final token = await authService.getToken();
       
-      if (!mounted) return;
+      final bookingService = BookingService(authToken: token);
+      final result = await bookingService.getOwnerNegotiations();
       
       setState(() {
         _isLoading = false;
-        
         if (result['success']) {
-          final allNegotiations = result['negotiations'] as List<Negotiation>;
-          
-          // Filter negotiations by status
-          _pendingNegotiations = allNegotiations.where((n) => 
-              n.status == 'pending' || n.status == 'counter_offered').toList();
-          
-          _completedNegotiations = allNegotiations.where((n) => 
-              n.status == 'accepted' || n.status == 'rejected').toList();
+          _negotiations = result['negotiations'];
         } else {
-          _errorMessage = result['message'] ?? 'Failed to load negotiations';
+          _errorMessage = result['message'];
         }
       });
     } catch (e) {
-      if (!mounted) return;
-      
       setState(() {
         _isLoading = false;
-        _errorMessage = 'An error occurred: $e';
+        _errorMessage = 'Failed to load negotiations: $e';
       });
     }
   }
   
-  void _showNegotiationActionDialog(Negotiation negotiation) {
-    final priceController = TextEditingController(
-      text: negotiation.currentAmount.toString()
-    );
+  Future<void> _respondToNegotiation(Negotiation negotiation, String action) async {
+    final priceController = TextEditingController();
     final messageController = TextEditingController();
     
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Respond to Negotiation'),
+    if (action == 'counter') {
+      // Show dialog to enter counter offer
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Counter Offer'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Booking #${negotiation.bookingId} - ${negotiation.turfName}',
-                style: const TextStyle(fontSize: 14.0),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Customer: ${negotiation.userName}',
-                style: const TextStyle(fontSize: 14.0),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Original Price:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Text(
-                    '\$${negotiation.originalAmount.toStringAsFixed(2)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Customer\'s Offer:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Text(
-                    '\$${negotiation.currentAmount.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: negotiation.currentAmount < negotiation.originalAmount 
-                          ? Colors.red 
-                          : Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              if (negotiation.message != null && negotiation.message!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Customer Message:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Container(
-                  margin: const EdgeInsets.only(top: 8.0),
-                  padding: const EdgeInsets.all(12.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(negotiation.message!),
-                ),
-              ],
-              const SizedBox(height: 24),
-              
-              const Text(
-                'Your Response:',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              
-              // Counter price input field
+              Text('Original Price: \$${negotiation.originalAmount.toStringAsFixed(2)}'),
+              Text('Current Offer: \$${negotiation.currentAmount.toStringAsFixed(2)}'),
+              const SizedBox(height: 16),
               TextField(
                 controller: priceController,
                 decoration: const InputDecoration(
-                  labelText: 'Your Counter Price (\$)',
+                  labelText: 'Your Counter Offer',
+                  prefixText: '\$ ',
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
               ),
-              
               const SizedBox(height: 12),
-              
-              // Message input field
               TextField(
                 controller: messageController,
                 decoration: const InputDecoration(
-                  labelText: 'Message to Customer (Optional)',
+                  labelText: 'Message (optional)',
                   border: OutlineInputBorder(),
-                  hintText: 'Explain your response...',
                 ),
                 maxLines: 3,
               ),
             ],
           ),
           actions: [
-            // Reject button
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _respondToNegotiation(negotiation.id, 'reject', null, messageController.text);
               },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
-              child: const Text('Reject Offer'),
+              child: const Text('Cancel'),
             ),
-            // Accept button
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _respondToNegotiation(negotiation.id, 'accept', null, messageController.text);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.green,
-              ),
-              child: const Text('Accept Offer'),
-            ),
-            // Counter offer button
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
-                
-                // Validate input
-                double? counterPrice;
-                try {
-                  counterPrice = double.parse(priceController.text);
-                  if (counterPrice <= 0) {
-                    throw Exception('Invalid price');
-                  }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a valid price'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-                
-                _respondToNegotiation(
-                  negotiation.id, 
-                  'counter', 
-                  counterPrice, 
-                  messageController.text
-                );
+                Navigator.pop(context, {
+                  'price': double.tryParse(priceController.text),
+                  'message': messageController.text,
+                });
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.secondaryColor,
+                backgroundColor: AppTheme.primaryColor,
               ),
-              child: const Text('Counter Offer'),
+              child: const Text('Submit Counter Offer'),
             ),
           ],
-        );
-      },
-    );
+        ),
+      ).then((result) async {
+        if (result != null) {
+          await _submitResponse(
+            negotiation.id,
+            action,
+            result['price'],
+            result['message'],
+          );
+        }
+      });
+    } else if (action == 'accept' || action == 'reject') {
+      // Show confirmation dialog
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${action == 'accept' ? 'Accept' : 'Reject'} Negotiation'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                action == 'accept'
+                    ? 'Are you sure you want to accept the offer of \$${negotiation.currentAmount.toStringAsFixed(2)}?'
+                    : 'Are you sure you want to reject this offer?',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Message (optional)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, {
+                  'message': messageController.text,
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: action == 'accept'
+                    ? Colors.green
+                    : Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(action == 'accept' ? 'Accept' : 'Reject'),
+            ),
+          ],
+        ),
+      ).then((result) async {
+        if (result != null) {
+          await _submitResponse(
+            negotiation.id,
+            action,
+            null,
+            result['message'],
+          );
+        }
+      });
+    }
   }
   
-  Future<void> _respondToNegotiation(
-    int negotiationId, 
-    String action, 
-    double? counterPrice, 
-    String message
+  Future<void> _submitResponse(
+    int negotiationId,
+    String action,
+    double? proposedPrice,
+    String? message,
   ) async {
-    // Show loading indicator
-    final loadingSnackBar = SnackBar(
-      content: Row(
-        children: [
-          SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text('Processing your response...'),
-        ],
-      ),
-      duration: const Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+    setState(() {
+      _isLoading = true;
+    });
     
     try {
-      // Make the API call to respond to the negotiation
-      final result = await _bookingService.respondToNegotiationAsOwner(
+      final authService = AuthService();
+      final token = await authService.getToken();
+      
+      final bookingService = BookingService(authToken: token);
+      final result = await bookingService.respondToNegotiationAsOwner(
         negotiationId: negotiationId,
         action: action,
-        proposedPrice: counterPrice,
-        message: message.trim().isNotEmpty ? message.trim() : null,
+        proposedPrice: proposedPrice,
+        message: message,
       );
       
-      // Add a small delay for better UX
-      await Future.delayed(const Duration(milliseconds: 200));
+      setState(() {
+        _isLoading = false;
+      });
       
-      // Refresh the negotiations list
-      await _loadNegotiations();
-      
-      // Show success message
       if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Your response has been sent'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+          _loadNegotiations(); // Reload the list
+        }
       } else {
-        throw Exception(result['message'] ?? 'Failed to respond to negotiation');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+        }
       }
     } catch (e) {
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
+      setState(() {
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+  
+  String _formatStatus(String status) {
+    return status.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
+  }
+  
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      case 'counter_offered':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
   
@@ -324,16 +256,6 @@ class _OwnerNegotiationsScreenState extends State<OwnerNegotiationsScreen> with 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Price Negotiations'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Pending'),
-            Tab(text: 'Completed'),
-          ],
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withOpacity(0.7),
-          indicatorColor: Colors.white,
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -343,296 +265,243 @@ class _OwnerNegotiationsScreenState extends State<OwnerNegotiationsScreen> with 
         ],
       ),
       body: _isLoading
-          ? Center(
-              child: SpinKitCircle(
-                color: AppTheme.primaryColor,
-                size: 50.0,
-              ),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Error: $_errorMessage',
-                        style: TextStyle(color: AppTheme.errorColor),
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: _loadNegotiations,
-                        style: AppTheme.primaryButtonStyle,
-                        child: const Text('Try Again'),
+                        child: const Text('Retry'),
                       ),
                     ],
                   ),
                 )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildNegotiationList(_pendingNegotiations, true),
-                    _buildNegotiationList(_completedNegotiations, false),
-                  ],
-                ),
-    );
-  }
-  
-  Widget _buildNegotiationList(List<Negotiation> negotiations, bool isActionable) {
-    if (negotiations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isActionable ? Icons.handshake : Icons.history,
-              size: 80,
-              color: Colors.grey[300],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              isActionable 
-                  ? 'No pending negotiations' 
-                  : 'No completed negotiations',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return RefreshIndicator(
-      onRefresh: _loadNegotiations,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: negotiations.length,
-        itemBuilder: (context, index) {
-          final negotiation = negotiations[index];
-          return _buildNegotiationCard(negotiation, isActionable);
-        },
-      ),
-    );
-  }
-  
-  Widget _buildNegotiationCard(Negotiation negotiation, bool isActionable) {
-    final priceChange = negotiation.currentAmount - negotiation.originalAmount;
-    final priceChangePercentage = (priceChange / negotiation.originalAmount) * 100;
-    final isPriceIncrease = priceChange >= 0;
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.0),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Negotiation header with booking ID and status
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Booking #${negotiation.bookingId}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
-                  ),
-                ),
-                _buildStatusChip(negotiation.status),
-              ],
-            ),
-            const SizedBox(height: 12.0),
-            
-            // Turf name and customer
-            Text(
-              'Turf: ${negotiation.turfName}',
-              style: const TextStyle(fontSize: 14.0),
-            ),
-            const SizedBox(height: 4.0),
-            Text(
-              'Customer: ${negotiation.userName}',
-              style: const TextStyle(fontSize: 14.0),
-            ),
-            const SizedBox(height: 12.0),
-            
-            // Price details
-            Card(
-              elevation: 0,
-              color: Colors.grey[100],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Original Price:',
-                          style: TextStyle(fontSize: 14.0),
-                        ),
-                        Text(
-                          '\$${negotiation.originalAmount.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 14.0,
-                            fontWeight: FontWeight.bold,
+              : _negotiations.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.handshake,
+                            size: 80,
+                            color: Colors.grey,
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8.0),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Current Offer:',
-                          style: TextStyle(fontSize: 14.0),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              '\$${negotiation.currentAmount.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontSize: 14.0,
-                                fontWeight: FontWeight.bold,
-                                color: isPriceIncrease ? Colors.green : Colors.red,
-                              ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No negotiations yet',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 4.0),
-                            Icon(
-                              isPriceIncrease ? Icons.arrow_upward : Icons.arrow_downward,
-                              size: 14.0,
-                              color: isPriceIncrease ? Colors.green : Colors.red,
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'When users request price negotiations, they will appear here',
+                            style: TextStyle(color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(8),
+                      itemCount: _negotiations.length,
+                      itemBuilder: (context, index) {
+                        final negotiation = _negotiations[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        negotiation.turfName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(negotiation.status).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: _getStatusColor(negotiation.status),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        _formatStatus(negotiation.status),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: _getStatusColor(negotiation.status),
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'From: ${negotiation.userName}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Original Price:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '\$${negotiation.originalAmount.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        decoration: TextDecoration.lineThrough,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Proposed Price:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '\$${negotiation.currentAmount.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: negotiation.currentAmount < negotiation.originalAmount
+                                            ? Colors.red
+                                            : Colors.green,
+                                      ),
+                                    ),
+                                    Text(
+                                      ' (${((negotiation.currentAmount - negotiation.originalAmount) / negotiation.originalAmount * 100).toStringAsFixed(1)}%)',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: negotiation.currentAmount < negotiation.originalAmount
+                                            ? Colors.red
+                                            : Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (negotiation.message != null && negotiation.message!.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[100],
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Message:',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(negotiation.message!),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Requested: ${_formatDate(negotiation.createdAt)}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                if (negotiation.updatedAt != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Last updated: ${_formatDate(negotiation.updatedAt!)}',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                                
+                                if (negotiation.status == 'pending') ...[
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        onPressed: () => _respondToNegotiation(negotiation, 'accept'),
+                                        icon: const Icon(Icons.check),
+                                        label: const Text('Accept'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.green,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                      ),
+                                      ElevatedButton.icon(
+                                        onPressed: () => _respondToNegotiation(negotiation, 'counter'),
+                                        icon: const Icon(Icons.swap_horiz),
+                                        label: const Text('Counter'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.blue,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                      ),
+                                      ElevatedButton.icon(
+                                        onPressed: () => _respondToNegotiation(negotiation, 'reject'),
+                                        icon: const Icon(Icons.close),
+                                        label: const Text('Reject'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
                             ),
-                            Text(
-                              '${priceChangePercentage.abs().toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: isPriceIncrease ? Colors.green : Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        );
+                      },
                     ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Message if any
-            if (negotiation.message != null && negotiation.message!.isNotEmpty) ...[
-              const SizedBox(height: 12.0),
-              const Text(
-                'Message:',
-                style: TextStyle(
-                  fontSize: 14.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4.0),
-              Text(
-                negotiation.message!,
-                style: const TextStyle(
-                  fontSize: 14.0,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-            
-            // Action buttons
-            if (isActionable) ...[
-              const SizedBox(height: 16.0),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => _respondToNegotiation(
-                      negotiation.id, 'reject', null, 'Sorry, we cannot accept this offer.'
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                  const SizedBox(width: 8.0),
-                  OutlinedButton(
-                    onPressed: () => _respondToNegotiation(
-                      negotiation.id, 'accept', null, 'Thank you for your business!'
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.green,
-                      side: const BorderSide(color: Colors.green),
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                  const SizedBox(width: 8.0),
-                  ElevatedButton(
-                    onPressed: () => _showNegotiationActionDialog(negotiation),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondaryColor,
-                    ),
-                    child: const Text('Respond'),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
   
-  Widget _buildStatusChip(String status) {
-    Color backgroundColor;
-    String statusText;
-    
-    switch (status) {
-      case 'pending':
-        backgroundColor = Colors.orange;
-        statusText = 'Pending';
-        break;
-      case 'counter_offered':
-        backgroundColor = Colors.blue;
-        statusText = 'Counter Offered';
-        break;
-      case 'accepted':
-        backgroundColor = Colors.green;
-        statusText = 'Accepted';
-        break;
-      case 'rejected':
-        backgroundColor = Colors.red;
-        statusText = 'Rejected';
-        break;
-      default:
-        backgroundColor = Colors.grey;
-        statusText = status.replaceAll('_', ' ');
-        statusText = statusText[0].toUpperCase() + statusText.substring(1);
-    }
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        statusText,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
+  String _formatDate(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
