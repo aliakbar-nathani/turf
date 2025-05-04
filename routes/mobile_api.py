@@ -767,10 +767,10 @@ def create_booking(current_user):
             start_time=start_time,
             end_time=end_time,
             total_price=total_price if not is_negotiation else float(proposed_price),
+            original_price=total_price,
             status=status,
             payment_method=payment_method,
-            user_proposed_price=float(proposed_price) if is_negotiation else None,
-            message=message
+            user_proposed_price=float(proposed_price) if is_negotiation else None
         )
         
         db.session.add(booking)
@@ -1070,8 +1070,7 @@ def get_owner_bookings(current_user):
                 'status': booking.status,
                 'payment_method': booking.payment_method,
                 'created_at': booking.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                'negotiation': latest_negotiation,
-                'message': booking.message
+                'negotiation': latest_negotiation
             }
             
             bookings_data.append(booking_data)
