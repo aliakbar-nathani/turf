@@ -212,6 +212,406 @@ def api_verify_token(current_user):
         }
     })
 
+# Turf API Endpoints
+@mobile_api.route('/turfs', methods=['GET'])
+def get_turfs():
+    """Get all turfs with pagination and filtering"""
+    try:
+        # Get query parameters
+        page = request.args.get('page', 1, type=int)
+        limit = request.args.get('limit', 10, type=int)
+        city = request.args.get('city', None, type=str)
+        indoor = request.args.get('indoor', None)
+        
+        # Convert indoor string to boolean if provided
+        if indoor is not None:
+            indoor = indoor.lower() == 'true'
+        
+        # Build query
+        query = Turf.query
+        
+        # Apply filters if provided
+        if city:
+            query = query.filter(Turf.city.ilike(f'%{city}%'))
+        if indoor is not None:
+            query = query.filter_by(indoor=indoor)
+        
+        # Count total results
+        total_turfs = query.count()
+        total_pages = (total_turfs + limit - 1) // limit if limit > 0 else 1
+        
+        # Apply pagination
+        query = query.order_by(Turf.created_at.desc())
+        turfs = query.offset((page - 1) * limit).limit(limit).all()
+        
+        # Prepare response data
+        turfs_data = []
+        for turf in turfs:
+            # Get primary image if available
+            primary_image = None
+            images = turf.images.all()
+            if images:
+                for img in images:
+                    if img.is_primary:
+                        primary_image = img
+                        break
+                if not primary_image:
+                    primary_image = images[0]
+            
+            # Build turf data dictionary
+            turf_data = {
+                'id': turf.id,
+                'name': turf.name,
+                'address': turf.address,
+                'city': turf.city,
+                'state': turf.state,
+                'country': turf.country,
+                'base_price_per_hour': turf.base_price_per_hour,
+                'features': turf.features.split(',') if turf.features else [],
+                'size': turf.size,
+                'indoor': turf.indoor,
+                'avg_rating': turf.get_average_rating(),
+                'rating_count': turf.get_rating_count(),
+                'surface_type': turf.surface_type,
+                'has_parking': turf.has_parking,
+                'has_changing_room': turf.has_changing_room,
+                'has_shower': turf.has_shower,
+                'has_floodlights': turf.has_floodlights,
+                'has_equipment': turf.has_equipment,
+                'image': primary_image.url if primary_image else None
+            }
+            turfs_data.append(turf_data)
+        
+        return jsonify({
+            'success': True,
+            'turfs': turfs_data,
+            'current_page': page,
+            'total_pages': total_pages,
+            'total_turfs': total_turfs
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching turfs: {str(e)}'
+        }), 500
+
+@mobile_api.route('/turf/<int:turf_id>', methods=['GET'])
+def get_turf_details(turf_id):
+    """Get detailed information for a single turf"""
+    try:
+        turf = Turf.query.get_or_404(turf_id)
+        
+        # Get all images
+        images = turf.images.all()
+        image_urls = [img.url for img in images]
+        
+        # Get primary image if available
+        primary_image = None
+        for img in images:
+            if img.is_primary:
+                primary_image = img.url
+                break
+        if not primary_image and images:
+            primary_image = images[0].url
+        
+        # Get available time slots for today
+        today = datetime.datetime.utcnow().date()
+        available_slots = turf.get_available_slots(today)
+        
+        # Convert time slots to a serializable format
+        slots_data = []
+        for slot in available_slots:
+            slots_data.append({
+                'id': slot.id,
+                'day_of_week': slot.day_of_week,
+                'start_time': slot.start_time.strftime('%H:%M'),
+                'end_time': slot.end_time.strftime('%H:%M'),
+                'price_adjustment': slot.price_adjustment
+            })
+        
+        # Build turf details response
+        turf_data = {
+            'id': turf.id,
+            'name': turf.name,
+            'description': turf.description,
+            'address': turf.address,
+            'city': turf.city,
+            'state': turf.state,
+            'country': turf.country,
+            'postal_code': turf.postal_code,
+            'latitude': turf.latitude,
+            'longitude': turf.longitude,
+            'base_price_per_hour': turf.base_price_per_hour,
+            'features': turf.features.split(',') if turf.features else [],
+            'size': turf.size,
+            'indoor': turf.indoor,
+            'avg_rating': turf.get_average_rating(),
+            'rating_count': turf.get_rating_count(),
+            'surface_type': turf.surface_type,
+            'has_parking': turf.has_parking,
+            'has_changing_room': turf.has_changing_room,
+            'has_shower': turf.has_shower,
+            'has_floodlights': turf.has_floodlights,
+            'has_equipment': turf.has_equipment,
+            'has_refreshments': turf.has_refreshments,
+            'primary_image': primary_image,
+            'images': image_urls,
+            'available_slots': slots_data,
+            'owner': {
+                'id': turf.owner.id,
+                'username': turf.owner.username
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'turf': turf_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching turf details: {str(e)}'
+        }), 500
+
+@mobile_api.route('/search', methods=['GET'])
+def search_turfs():
+    """API endpoint for basic turf search"""
+    try:
+        # Get query parameters
+        city = request.args.get('city', None, type=str)
+        date_str = request.args.get('date', None, type=str)
+        min_price = request.args.get('min_price', None, type=float)
+        max_price = request.args.get('max_price', None, type=float)
+        indoor = request.args.get('indoor', None)
+        
+        # Convert string parameters
+        date = None
+        if date_str:
+            try:
+                date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if indoor is not None:
+            indoor = indoor.lower() == 'true'
+        
+        # Build query
+        query = Turf.query.filter(Turf.active == True)
+        
+        # Apply filters
+        if city:
+            query = query.filter(Turf.city.ilike(f'%{city}%'))
+        if min_price is not None:
+            query = query.filter(Turf.base_price_per_hour >= min_price)
+        if max_price is not None:
+            query = query.filter(Turf.base_price_per_hour <= max_price)
+        if indoor is not None:
+            query = query.filter_by(indoor=indoor)
+        
+        # Execute query
+        turfs = query.all()
+        
+        # Filter by availability if date is provided
+        if date:
+            available_turfs = []
+            for turf in turfs:
+                available_slots = turf.get_available_slots(date)
+                if available_slots:
+                    turf.available_slots = available_slots
+                    available_turfs.append(turf)
+            turfs = available_turfs
+        
+        # Prepare response data
+        turfs_data = []
+        for turf in turfs:
+            # Get primary image if available
+            primary_image = None
+            images = turf.images.all()
+            if images:
+                for img in images:
+                    if img.is_primary:
+                        primary_image = img
+                        break
+                if not primary_image:
+                    primary_image = images[0]
+            
+            # Build turf data
+            turf_data = {
+                'id': turf.id,
+                'name': turf.name,
+                'address': turf.address,
+                'city': turf.city,
+                'state': turf.state,
+                'country': turf.country,
+                'base_price_per_hour': turf.base_price_per_hour,
+                'features': turf.features.split(',') if turf.features else [],
+                'size': turf.size,
+                'indoor': turf.indoor,
+                'avg_rating': turf.get_average_rating(),
+                'rating_count': turf.get_rating_count(),
+                'surface_type': turf.surface_type,
+                'has_parking': turf.has_parking,
+                'has_changing_room': turf.has_changing_room,
+                'has_shower': turf.has_shower,
+                'has_floodlights': turf.has_floodlights,
+                'has_equipment': turf.has_equipment,
+                'image': primary_image.url if primary_image else None
+            }
+            turfs_data.append(turf_data)
+        
+        return jsonify({
+            'success': True,
+            'turfs': turfs_data,
+            'count': len(turfs_data)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error searching turfs: {str(e)}'
+        }), 500
+
+@mobile_api.route('/advanced_search', methods=['GET'])
+def advanced_search_turfs():
+    """API endpoint for advanced turf search"""
+    try:
+        # Get query parameters
+        city = request.args.get('city', None, type=str)
+        date_str = request.args.get('date', None, type=str)
+        min_price = request.args.get('min_price', None, type=float)
+        max_price = request.args.get('max_price', None, type=float)
+        indoor = request.args.get('indoor', None)
+        has_parking = request.args.get('has_parking', None)
+        has_changing_room = request.args.get('has_changing_room', None)
+        has_shower = request.args.get('has_shower', None)
+        has_floodlights = request.args.get('has_floodlights', None)
+        has_equipment = request.args.get('has_equipment', None)
+        min_rating = request.args.get('min_rating', None, type=int)
+        surface_type = request.args.get('surface_type', None, type=str)
+        
+        # Convert string parameters to appropriate types
+        date = None
+        if date_str:
+            try:
+                date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        if indoor is not None:
+            indoor = indoor.lower() == 'true'
+        if has_parking is not None:
+            has_parking = has_parking.lower() == 'true'
+        if has_changing_room is not None:
+            has_changing_room = has_changing_room.lower() == 'true'
+        if has_shower is not None:
+            has_shower = has_shower.lower() == 'true'
+        if has_floodlights is not None:
+            has_floodlights = has_floodlights.lower() == 'true'
+        if has_equipment is not None:
+            has_equipment = has_equipment.lower() == 'true'
+        
+        # Start with active turfs
+        query = Turf.query.filter(Turf.active == True)
+        
+        # Apply filters
+        if city:
+            query = query.filter(Turf.city.ilike(f'%{city}%'))
+        if min_price is not None:
+            query = query.filter(Turf.base_price_per_hour >= min_price)
+        if max_price is not None:
+            query = query.filter(Turf.base_price_per_hour <= max_price)
+        if indoor is not None:
+            query = query.filter_by(indoor=indoor)
+        
+        # Get initial results that match database columns
+        turfs = query.all()
+        
+        # Apply post-query filters (for virtual properties)
+        filtered_turfs = []
+        for turf in turfs:
+            include = True
+            
+            # Apply feature filters
+            if has_parking and not turf.has_parking:
+                include = False
+            if has_changing_room and not turf.has_changing_room:
+                include = False
+            if has_shower and not turf.has_shower:
+                include = False
+            if has_floodlights and not turf.has_floodlights:
+                include = False
+            if has_equipment and not turf.has_equipment:
+                include = False
+            
+            # Apply surface type filter
+            if surface_type and turf.surface_type != surface_type:
+                include = False
+            
+            # Apply rating filter
+            if min_rating and turf.get_average_rating() < min_rating:
+                include = False
+            
+            if include:
+                filtered_turfs.append(turf)
+        
+        # Apply date filter
+        if date:
+            available_turfs = []
+            for turf in filtered_turfs:
+                available_slots = turf.get_available_slots(date)
+                if available_slots:
+                    turf.available_slots = available_slots
+                    available_turfs.append(turf)
+            filtered_turfs = available_turfs
+        
+        # Prepare response data
+        turfs_data = []
+        for turf in filtered_turfs:
+            # Get primary image if available
+            primary_image = None
+            images = turf.images.all()
+            if images:
+                for img in images:
+                    if img.is_primary:
+                        primary_image = img
+                        break
+                if not primary_image:
+                    primary_image = images[0]
+            
+            # Build turf data
+            turf_data = {
+                'id': turf.id,
+                'name': turf.name,
+                'address': turf.address,
+                'city': turf.city,
+                'state': turf.state,
+                'country': turf.country,
+                'base_price_per_hour': turf.base_price_per_hour,
+                'features': turf.features.split(',') if turf.features else [],
+                'size': turf.size,
+                'indoor': turf.indoor,
+                'avg_rating': turf.get_average_rating(),
+                'rating_count': turf.get_rating_count(),
+                'surface_type': turf.surface_type,
+                'has_parking': turf.has_parking,
+                'has_changing_room': turf.has_changing_room,
+                'has_shower': turf.has_shower,
+                'has_floodlights': turf.has_floodlights,
+                'has_equipment': turf.has_equipment,
+                'image': primary_image.url if primary_image else None
+            }
+            turfs_data.append(turf_data)
+        
+        return jsonify({
+            'success': True,
+            'turfs': turfs_data,
+            'count': len(turfs_data)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error in advanced search: {str(e)}'
+        }), 500
+
 # Reviews API Endpoints
 @mobile_api.route('/turf/<int:turf_id>/reviews', methods=['GET'])
 def get_turf_reviews(turf_id):

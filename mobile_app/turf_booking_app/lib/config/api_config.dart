@@ -19,10 +19,10 @@ class ApiConfig {
   static const String registerOwner = '/api/mobile/register';
   
   // Turf endpoints
-  static const String turfs = '/turf/list';
-  static const String turfDetails = '/turf/details';
-  static const String search = '/turf/search';
-  static const String advancedSearch = '/turf/advanced_search';
+  static const String turfs = '/api/mobile/turfs';
+  static const String turfDetails = '/api/mobile/turf';
+  static const String search = '/api/mobile/search';
+  static const String advancedSearch = '/api/mobile/advanced_search';
   
   // Booking endpoints
   static const String bookings = '/user/bookings';

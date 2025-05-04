@@ -20,7 +20,7 @@ class TurfService {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success']) {
         final List<Turf> turfs = (responseData['turfs'] as List)
             .map((turfJson) => Turf.fromJson(turfJson))
             .toList();
@@ -54,7 +54,7 @@ class TurfService {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success']) {
         return {
           'success': true,
           'turf': Turf.fromJson(responseData['turf']),
