@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/app_theme.dart';
+import '../../config/api_config.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_session_manager.dart';
 import '../auth/login_screen.dart';
 
 class UserBookingsScreen extends StatefulWidget {
@@ -151,13 +153,10 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
     // Get the redirect URL for payment
     String paymentUrl = '';
     
-    // Construct payment URL (same format as in mobile_api.py)
-    String? domain = '';
+    // Construct payment URL using the API base URL
     try {
-      // This would be implemented properly in production
-      // For now, we're just constructing the URL as it would be in a real app
-      domain = 'turf-booking-app.replit.app';
-      paymentUrl = 'https://$domain/payment/checkout/${booking.id}';
+      // Use the same base URL as the rest of the API
+      paymentUrl = '${ApiConfig.baseUrl}/payment/checkout/${booking.id}';
     } catch (e) {
       print('Error constructing payment URL: $e');
     }
@@ -346,7 +345,8 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                   ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
                   
                   // Make the API call to submit the negotiation
-                  final bookingService = BookingService(authToken: UserSessionManager().token);
+                  final token = await _authService.getToken();
+                  final bookingService = BookingService(authToken: token);
                   final result = await bookingService.respondToNegotiation(
                     bookingId: booking.id,
                     action: 'counter',

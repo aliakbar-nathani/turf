@@ -1018,11 +1018,15 @@ def respond_to_negotiation(current_user, booking_id):
         else:
             message = 'Counter offer submitted'
         
+        # Get updated booking details to return
+        updated_booking = _prepare_booking_for_api(booking)
+        
         return jsonify({
             'success': True,
             'message': message,
             'action': action,
-            'booking_id': booking_id
+            'booking_id': booking_id,
+            'booking': updated_booking
         })
     
     except Exception as e:
