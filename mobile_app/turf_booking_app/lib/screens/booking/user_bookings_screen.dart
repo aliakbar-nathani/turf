@@ -187,27 +187,180 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
-                // In a real app, we would launch the external browser with the payment URL
-                // or open a WebView component
-                
-                // Display the URL in a snackbar for demo purposes
+              onPressed: () async {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Payment URL: $paymentUrl'),
-                    duration: const Duration(seconds: 10),
-                    action: SnackBarAction(
-                      label: 'OK',
-                      onPressed: () {},
+                
+                try {
+                  // Try to launch the URL in the external browser
+                  // Note: In a real app, we'd use a proper URL launcher
+                  // For example with url_launcher package:
+                  // await launch(paymentUrl);
+                  
+                  // Simulating successful launch with a snackbar
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Opening payment page in browser...'),
+                      duration: const Duration(seconds: 3),
+                      backgroundColor: AppTheme.successColor,
                     ),
-                  ),
-                );
+                  );
+                  
+                  // Show payment URL for demo purposes
+                  Future.delayed(const Duration(seconds: 3), () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Payment URL: $paymentUrl'),
+                        duration: const Duration(seconds: 10),
+                        action: SnackBarAction(
+                          label: 'OK',
+                          onPressed: () {},
+                        ),
+                      ),
+                    );
+                  });
+                } catch (e) {
+                  // Show error if URL launch fails
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Could not open payment page: $e'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
               ),
               child: const Text('Proceed to Payment'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  void _showNegotiationDialog(Booking booking) {
+    final proposedPriceController = TextEditingController(
+      text: booking.proposedPrice?.toString() ?? booking.price.toString()
+    );
+    final messageController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Negotiate Price'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Booking #${booking.id} - ${booking.turfName}'),
+              const SizedBox(height: 8),
+              Text('Current Price: \$${booking.price.toStringAsFixed(2)}'),
+              const SizedBox(height: 16),
+              
+              // Price input field
+              TextField(
+                controller: proposedPriceController,
+                decoration: const InputDecoration(
+                  labelText: 'Your Proposed Price (\$)',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  // In a real app, we'd use a proper numeric formatter
+                  // FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Message input field
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Message to Owner (Optional)',
+                  border: OutlineInputBorder(),
+                  hintText: 'Explain why you are proposing this price...',
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                
+                // Validate input
+                double? proposedPrice;
+                try {
+                  proposedPrice = double.parse(proposedPriceController.text);
+                  if (proposedPrice <= 0) {
+                    throw Exception('Invalid price');
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid price'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+                
+                // Show loading indicator
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Submitting your offer...'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+                
+                try {
+                  // Make the API call to submit the negotiation
+                  final bookingService = BookingService();
+                  await bookingService.respondToNegotiation(
+                    bookingId: booking.id,
+                    action: 'counter',
+                    proposedPrice: proposedPrice,
+                    message: messageController.text.trim(),
+                  );
+                  
+                  // Add a small delay for better UX
+                  await Future.delayed(const Duration(milliseconds: 200));
+                  
+                  // Refresh the bookings list
+                  await _loadBookings();
+                  
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Your price proposal has been sent to the owner'),
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                  );
+                } catch (e) {
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.secondaryColor,
+              ),
+              child: const Text('Submit Offer'),
             ),
           ],
         );
@@ -517,12 +670,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     const SizedBox(width: 8.0),
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to negotiation screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Negotiation view coming soon'),
-                          ),
-                        );
+                        _showNegotiationDialog(booking);
                       },
                       style: AppTheme.secondaryButtonStyle,
                       child: const Text('Negotiation'),

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 import stripe
 import os
+import json
 
 from app import db
 from models import Booking, BookingStatus, Turf, Notification, NotificationType
@@ -173,11 +174,9 @@ def webhook():
     except ValueError as e:
         # Invalid payload
         return 'Invalid payload', 400
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
-        return 'Invalid signature', 400
     except Exception as e:
-        return f'Error: {str(e)}', 400
+        # Handle other errors, including Stripe signature verification errors
+        return f'Error processing webhook: {str(e)}', 400
 
     # Handle specific events
     if event['type'] == 'checkout.session.completed':
@@ -202,7 +201,8 @@ def webhook():
                         type=NotificationType.PAYMENT_SUCCESS,
                         title='Payment Successful',
                         message=f'Your payment for booking #{booking.id} has been successfully processed.',
-                        booking_id=booking.id
+                        booking_id=booking.id,
+                        turf_id=booking.turf_id
                     )
                     db.session.add(notification)
                     db.session.commit()
