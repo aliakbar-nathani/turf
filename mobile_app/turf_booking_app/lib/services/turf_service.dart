@@ -98,7 +98,7 @@ class TurfService {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success']) {
         final List<Turf> turfs = (responseData['turfs'] as List)
             .map((turfJson) => Turf.fromJson(turfJson))
             .toList();
@@ -106,6 +106,7 @@ class TurfService {
         return {
           'success': true,
           'turfs': turfs,
+          'count': responseData['count'] ?? turfs.length,
         };
       } else {
         return {
@@ -160,7 +161,7 @@ class TurfService {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success']) {
         final List<Turf> turfs = (responseData['turfs'] as List)
             .map((turfJson) => Turf.fromJson(turfJson))
             .toList();
@@ -168,6 +169,7 @@ class TurfService {
         return {
           'success': true,
           'turfs': turfs,
+          'count': responseData['count'] ?? turfs.length,
         };
       } else {
         return {
@@ -199,7 +201,7 @@ class TurfService {
 
       final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && responseData['success']) {
         return {
           'success': true,
           'isFavorite': responseData['is_favorite'],
