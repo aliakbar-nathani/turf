@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, make_response
 import jwt
 import datetime
 import os
@@ -472,9 +472,17 @@ def search_turfs():
             'message': f'Error searching turfs: {str(e)}'
         }), 500
 
-@mobile_api.route('/turf/<int:turf_id>/time_slots', methods=['GET'])
+@mobile_api.route('/turf/<int:turf_id>/time_slots', methods=['GET', 'OPTIONS'])
 def get_turf_time_slots(turf_id):
     """Get available time slots for a specific turf on a given date"""
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET')
+        return response
+        
     try:
         # Get the date from query parameters
         date_str = request.args.get('date', None, type=str)

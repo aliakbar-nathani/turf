@@ -184,7 +184,7 @@ class BookingService {
   Future<Map<String, dynamic>> getAvailableTimeSlots(int turfId, String date) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/turf/$turfId/time_slots?date=$date'),
+        Uri.parse('${ApiConfig.baseUrl}/api/mobile/turf/$turfId/time_slots?date=$date'),
         headers: _getHeaders(),
       );
 

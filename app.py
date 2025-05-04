@@ -26,7 +26,9 @@ app.secret_key = os.environ.get("SESSION_SECRET", os.urandom(24))
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Enable CORS for all routes and origins
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, 
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     allow_headers=["Authorization", "Content-Type", "Accept", "Origin"])
 
 # Add hasattr to Jinja environment
 app.jinja_env.globals.update(hasattr=hasattr)
