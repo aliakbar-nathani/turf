@@ -823,8 +823,14 @@ def create_booking(current_user):
         
         # Add payment link if online payment is selected
         if payment_option == 'pay_online' and not is_negotiation:
-            # In a real app, generate a payment URL
-            response_data['redirect_url'] = f'/payment/{booking.id}'
+            # Generate payment URL for Stripe checkout
+            # This will use the same payment URL format as our web frontend
+            domain = os.environ.get('REPLIT_DEV_DOMAIN', '') 
+            if not domain and os.environ.get('REPLIT_DOMAINS'):
+                domain = os.environ.get('REPLIT_DOMAINS', '').split(',')[0]
+                
+            # Absolute URL for the payment page
+            response_data['redirect_url'] = f'https://{domain}/payment/checkout/{booking.id}'
         
         if is_negotiation:
             response_data['message'] = 'Your booking with price negotiation has been submitted'

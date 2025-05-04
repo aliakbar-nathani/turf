@@ -9,8 +9,8 @@ from models import Booking, BookingStatus, Turf, Notification, NotificationType
 payment = Blueprint('payment', __name__)
 
 # Setup Stripe
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_placeholder')
-YOUR_DOMAIN = os.environ.get('REPLIT_DEV_DOMAIN') if os.environ.get('REPLIT_DEPLOYMENT') != '' else os.environ.get('REPLIT_DOMAINS', '').split(',')[0]
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+YOUR_DOMAIN = os.environ.get('REPLIT_DEV_DOMAIN', '') if os.environ.get('REPLIT_DEPLOYMENT', '') != '' else os.environ.get('REPLIT_DOMAINS', '').split(',')[0]
 
 @payment.route('/checkout/<int:booking_id>', methods=['GET'])
 @login_required
