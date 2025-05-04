@@ -3,7 +3,8 @@ class ApiConfig {
   static String get baseUrl {
     // For web platform, use the dynamic host
     if (Uri.base.toString() != 'null') {
-      return 'https://${Uri.base.host}:5000';
+      // Use http instead of https for development
+      return 'http://${Uri.base.host}:5000';
     }
     // Default fallbacks
     return 'http://localhost:5000'; // Default to localhost
