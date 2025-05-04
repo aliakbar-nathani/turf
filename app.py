@@ -106,6 +106,54 @@ with app.app_context():
     csrf.exempt(mobile_api)
     app.register_blueprint(mobile_api, url_prefix='/api/mobile')
     
+    # API endpoint for time slots directly from app - needed for mobile app
+    @app.route('/api/turf/<int:turf_id>/time_slots', methods=['GET'])
+    @csrf.exempt
+    def api_time_slots(turf_id):
+        """API endpoint to get available time slots for a turf on a specific date"""
+        from models import Turf
+        date_str = request.args.get('date')
+        
+        if not date_str:
+            return jsonify({
+                'success': False,
+                'error': 'Date is a required parameter'
+            }), 400
+        
+        try:
+            from datetime import datetime
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid date format. Use YYYY-MM-DD'
+            }), 400
+        
+        turf = Turf.query.get_or_404(turf_id)
+        
+        # Get available time slots
+        available_slots = turf.get_available_slots(date_obj)
+        
+        # Format the slots for JSON response
+        formatted_slots = []
+        for slot in available_slots:
+            formatted_slots.append({
+                'id': slot.id,
+                'day_of_week': slot.day_of_week,
+                'start_time': slot.start_time.strftime('%H:%M'),
+                'end_time': slot.end_time.strftime('%H:%M'),
+                'value': f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}",
+                'text': f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')}",
+                'price_adjustment': slot.price_adjustment
+            })
+        
+        return jsonify({
+            'success': True,
+            'turf_id': turf_id,
+            'date': date_str,
+            'time_slots': formatted_slots
+        })
+    
     # User loader for Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
