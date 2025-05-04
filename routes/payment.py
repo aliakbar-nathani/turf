@@ -182,17 +182,11 @@ def mobile_checkout(booking_id):
         import jwt
         from datetime import datetime, timezone
         
-        secret_key = os.environ.get('JWT_SECRET_KEY', 'fallback_secret_for_dev')
+        secret_key = 'turf-booking-jwt-secret-for-mobile-app'  # Match the key used in mobile_api.py
         payload = jwt.decode(token, secret_key, algorithms=['HS256'])
         
-        # Check token expiration
-        if datetime.now(timezone.utc).timestamp() > payload.get('exp', 0):
-            return json.dumps({
-                'success': False,
-                'message': 'Token expired'
-            }), 401, {'Content-Type': 'application/json'}
-            
-        user_id = payload.get('user_id')
+        # Extract user ID from payload
+        user_id = int(payload.get('sub', 0))  # Using 'sub' key that mobile_api.py uses
         
         if booking.user_id != user_id:
             return json.dumps({
@@ -313,17 +307,11 @@ def mobile_payment_status(booking_id):
         import jwt
         from datetime import datetime, timezone
         
-        secret_key = os.environ.get('JWT_SECRET_KEY', 'fallback_secret_for_dev')
+        secret_key = 'turf-booking-jwt-secret-for-mobile-app'  # Match the key used in mobile_api.py
         payload = jwt.decode(token, secret_key, algorithms=['HS256'])
         
-        # Check token expiration
-        if datetime.now(timezone.utc).timestamp() > payload.get('exp', 0):
-            return json.dumps({
-                'success': False,
-                'message': 'Token expired'
-            }), 401, {'Content-Type': 'application/json'}
-            
-        user_id = payload.get('user_id')
+        # Extract user ID from payload
+        user_id = int(payload.get('sub', 0))  # Using 'sub' key that mobile_api.py uses
         
         booking = Booking.query.get_or_404(booking_id)
         if booking.user_id != user_id:

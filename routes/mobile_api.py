@@ -901,6 +901,49 @@ def get_user_bookings(current_user):
             'message': f'Error fetching bookings: {str(e)}'
         }), 500
 
+@mobile_api.route('/booking/<int:booking_id>/cancel', methods=['POST'])
+@token_required
+def cancel_booking(current_user, booking_id):
+    """Cancel a booking"""
+    try:
+        # Get the booking
+        booking = Booking.query.get_or_404(booking_id)
+        
+        # Check if user owns this booking or is the turf owner
+        turf = Turf.query.get(booking.turf_id)
+        is_turf_owner = (current_user.id == turf.owner_id)
+        is_booking_user = (current_user.id == booking.user_id)
+        
+        if not (is_turf_owner or is_booking_user):
+            return jsonify({
+                'success': False,
+                'message': 'You do not have permission to cancel this booking'
+            }), 403
+        
+        # Check if booking can be canceled (not completed or already canceled)
+        if booking.status in [BookingStatus.COMPLETED, BookingStatus.CANCELLED]:
+            return jsonify({
+                'success': False,
+                'message': f'Booking cannot be canceled (current status: {booking.status})'
+            }), 400
+        
+        # Update booking status to cancelled
+        booking.status = BookingStatus.CANCELLED
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Booking cancelled successfully',
+            'booking_id': booking_id
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error cancelling booking: {str(e)}'
+        }), 500
+
 @mobile_api.route('/booking/<int:booking_id>/negotiation', methods=['POST'])
 @token_required
 def respond_to_negotiation(current_user, booking_id):
@@ -1291,6 +1334,105 @@ def submit_review(current_user, turf_id):
         return jsonify({
             'success': False,
             'message': f'Failed to submit review: {str(e)}'
+        }), 500
+
+@mobile_api.route('/user/profile', methods=['GET'])
+@token_required
+def get_user_profile(current_user):
+    """Get the current user's profile information"""
+    try:
+        user_data = {
+            'id': current_user.id,
+            'username': current_user.username,
+            'email': current_user.email,
+            'phone_number': current_user.phone_number,
+            'role': current_user.role,
+            'created_at': current_user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': user_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error getting user profile: {str(e)}'
+        }), 500
+
+@mobile_api.route('/user/profile', methods=['PUT'])
+@token_required
+def update_user_profile(current_user):
+    """Update the current user's profile information"""
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            'success': False,
+            'message': 'No data provided'
+        }), 400
+    
+    username = data.get('username')
+    phone_number = data.get('phone_number')
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    if not username:
+        return jsonify({
+            'success': False,
+            'message': 'Username is required'
+        }), 400
+    
+    if not phone_number:
+        return jsonify({
+            'success': False,
+            'message': 'Phone number is required'
+        }), 400
+    
+    try:
+        # Check if username is taken by another user
+        existing_user = User.query.filter(User.username == username, User.id != current_user.id).first()
+        if existing_user:
+            return jsonify({
+                'success': False,
+                'message': 'Username is already taken'
+            }), 400
+        
+        # Update basic info
+        current_user.username = username
+        current_user.phone_number = phone_number
+        
+        # Update password if provided
+        if current_password and new_password:
+            if not current_user.check_password(current_password):
+                return jsonify({
+                    'success': False,
+                    'message': 'Current password is incorrect'
+                }), 400
+            
+            current_user.set_password(new_password)
+        
+        db.session.commit()
+        
+        # Return updated user data
+        user_data = {
+            'id': current_user.id,
+            'username': current_user.username,
+            'email': current_user.email,
+            'phone_number': current_user.phone_number,
+            'role': current_user.role,
+            'created_at': current_user.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Profile updated successfully',
+            'data': user_data
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error updating profile: {str(e)}'
         }), 500
 
 @mobile_api.route('/user/reviews', methods=['GET'])
