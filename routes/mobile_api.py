@@ -11,6 +11,8 @@ from app import db
 # Create a blueprint for all mobile API routes
 mobile_api = Blueprint('mobile_api', __name__)
 
+# Time slots endpoint is defined later in this file
+
 # JWT Configuration - Always use the same secret in development for testing
 JWT_SECRET = 'turf-booking-jwt-secret-for-mobile-app'
 JWT_EXPIRATION = datetime.timedelta(days=7)
@@ -471,7 +473,7 @@ def search_turfs():
         }), 500
 
 @mobile_api.route('/turf/<int:turf_id>/time_slots', methods=['GET'])
-def get_available_time_slots(turf_id):
+def get_turf_time_slots(turf_id):
     """Get available time slots for a specific turf on a given date"""
     try:
         # Get the date from query parameters
@@ -497,30 +499,37 @@ def get_available_time_slots(turf_id):
         # Get available time slots for the date
         time_slots = turf.get_available_slots(date)
         
-        # If no time slots are available for the date, provide dummy slots
+        # If no time slots are available for the date, return empty array
         if not time_slots:
-            # Create some sample time slots
-            dummy_slots = [
-                "09:00 - 10:00",
-                "10:00 - 11:00",
-                "11:00 - 12:00",
-                "14:00 - 15:00",
-                "15:00 - 16:00",
-                "16:00 - 17:00",
-                "17:00 - 18:00",
-                "18:00 - 19:00"
-            ]
             return jsonify({
                 'success': True,
-                'time_slots': dummy_slots
+                'time_slots': []
             })
         
         # Format the time slots
         formatted_slots = []
         for slot in time_slots:
-            start = slot.start_time.strftime('%H:%M')
-            end = slot.end_time.strftime('%H:%M')
-            formatted_slots.append(f"{start} - {end}")
+            # Calculate adjusted price
+            adjusted_price = turf.base_price_per_hour
+            if slot.price_adjustment:
+                adjusted_price = adjusted_price * (1 + slot.price_adjustment / 100)
+                
+            # Format times
+            start_time = slot.start_time.strftime('%H:%M')
+            end_time = slot.end_time.strftime('%H:%M')
+            start_time_12hr = slot.start_time.strftime('%I:%M %p')
+            end_time_12hr = slot.end_time.strftime('%I:%M %p')
+            
+            formatted_slots.append({
+                'id': slot.id,
+                'day_of_week': slot.day_of_week,
+                'start_time': start_time,
+                'end_time': end_time,
+                'value': f"{start_time} - {end_time}",
+                'text': f"{start_time_12hr} - {end_time_12hr}",
+                'price': round(adjusted_price, 2),
+                'price_adjustment': slot.price_adjustment
+            })
         
         return jsonify({
             'success': True,
