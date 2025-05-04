@@ -5,6 +5,7 @@ import '../models/turf_model.dart';
 
 class TurfService {
   final String? authToken;
+  final String baseUrl = AppConstants.apiBaseUrl;
 
   TurfService({this.authToken});
 

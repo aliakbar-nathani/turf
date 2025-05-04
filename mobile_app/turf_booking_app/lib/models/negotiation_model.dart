@@ -1,24 +1,24 @@
 class Negotiation {
   final int id;
   final int bookingId;
-  final double originalPrice;
-  final double proposedPrice;
-  final String status;  // 'pending', 'accepted', 'rejected', 'countered'
+  final String turfName;
+  final String userName;
+  final double originalAmount;
+  final double currentAmount;
+  final String status;
   final String? message;
-  final String? ownerResponse;
-  final double? counterOfferPrice;
-  final String createdAt;
-  final String? updatedAt;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
 
   Negotiation({
     required this.id,
     required this.bookingId,
-    required this.originalPrice,
-    required this.proposedPrice,
+    required this.turfName,
+    required this.userName,
+    required this.originalAmount,
+    required this.currentAmount,
     required this.status,
     this.message,
-    this.ownerResponse,
-    this.counterOfferPrice,
     required this.createdAt,
     this.updatedAt,
   });
@@ -27,14 +27,14 @@ class Negotiation {
     return Negotiation(
       id: json['id'],
       bookingId: json['booking_id'],
-      originalPrice: json['original_price'].toDouble(),
-      proposedPrice: json['proposed_price'].toDouble(),
+      turfName: json['turf_name'],
+      userName: json['user_name'],
+      originalAmount: json['original_amount'].toDouble(),
+      currentAmount: json['current_amount'].toDouble(),
       status: json['status'],
       message: json['message'],
-      ownerResponse: json['owner_response'],
-      counterOfferPrice: json['counter_offer_price']?.toDouble(),
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
     );
   }
 
@@ -42,24 +42,14 @@ class Negotiation {
     return {
       'id': id,
       'booking_id': bookingId,
-      'original_price': originalPrice,
-      'proposed_price': proposedPrice,
+      'turf_name': turfName,
+      'user_name': userName,
+      'original_amount': originalAmount,
+      'current_amount': currentAmount,
       'status': status,
       'message': message,
-      'owner_response': ownerResponse,
-      'counter_offer_price': counterOfferPrice,
-      'created_at': createdAt,
-      'updated_at': updatedAt,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
-
-  bool get isAccepted => status == 'accepted';
-  bool get isRejected => status == 'rejected';
-  bool get isCountered => status == 'countered';
-  bool get isPending => status == 'pending';
-
-  double get discount => originalPrice - proposedPrice;
-  double get discountPercentage => (discount / originalPrice) * 100;
-
-  String get formattedDiscount => '${discountPercentage.toStringAsFixed(1)}%';
 }
