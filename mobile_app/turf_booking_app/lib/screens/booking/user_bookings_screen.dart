@@ -631,51 +631,67 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                 
                 const SizedBox(height: 8.0),
                 
-                // Booking date and time
-                Row(
+                // Booking date and time - use Wrap to prevent overflow
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
                   children: [
-                    Icon(
-                      Icons.calendar_today,
-                      size: 16.0,
-                      color: Colors.grey[600],
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16.0,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4.0),
+                        Text(
+                          booking.formattedDate,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 13.0,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      booking.formattedDate,
-                      style: TextStyle(
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(width: 16.0),
-                    Icon(
-                      Icons.access_time,
-                      size: 16.0,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(width: 8.0),
-                    Text(
-                      booking.formattedTimeSlot,
-                      style: TextStyle(
-                        color: Colors.grey[800],
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 16.0,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4.0),
+                        Text(
+                          booking.formattedTimeSlot,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 13.0,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
                 
                 const SizedBox(height: 8.0),
                 
-                // Price
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Price and payment info - use Wrap for flexible layout
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  alignment: WrapAlignment.spaceBetween,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.payments_outlined,
                           size: 16.0,
                           color: Colors.grey[600],
                         ),
-                        const SizedBox(width: 8.0),
+                        const SizedBox(width: 6.0),
                         RichText(
                           text: TextSpan(
                             style: DefaultTextStyle.of(context).style,
@@ -684,6 +700,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                                 text: 'Price: ',
                                 style: TextStyle(
                                   color: Colors.grey[600],
+                                  fontSize: 13.0,
                                 ),
                               ),
                               TextSpan(
@@ -691,6 +708,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black,
+                                  fontSize: 13.0,
                                 ),
                               ),
                             ],
@@ -702,7 +720,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     // Payment method tag
                     if (booking.paymentMethod != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: booking.paymentMethod == 'pay_online' 
                               ? Colors.blue.withOpacity(0.1) 
@@ -719,7 +737,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                               ? 'Online Payment' 
                               : 'Pay on Arrival',
                           style: TextStyle(
-                            fontSize: 11.0,
+                            fontSize: 10.0,
                             fontWeight: FontWeight.bold,
                             color: booking.paymentMethod == 'pay_online' 
                                 ? Colors.blue 
@@ -736,14 +754,18 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                   const Divider(),
                   const SizedBox(height: 8.0),
                   
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Use Wrap for better responsiveness
+                  Wrap(
+                    spacing: 8.0,
+                    runSpacing: 4.0,
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
                       Text(
                         'Your Proposed Price:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppTheme.secondaryColor,
+                          fontSize: 13.0,
                         ),
                       ),
                       Text(
@@ -751,7 +773,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppTheme.secondaryColor,
-                          fontSize: 16.0,
+                          fontSize: 15.0,
                         ),
                       ),
                     ],
@@ -772,9 +794,11 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                 
                 const SizedBox(height: 16.0),
                 
-                // Action buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                // Action buttons - Wrap for flexibility in small screens
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  alignment: WrapAlignment.end,
                   children: _buildActionButtons(booking, type),
                 ),
               ],
