@@ -38,24 +38,109 @@ class Booking {
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    // Handle both direct and nested turf data structure
+    var turfId = 0;
+    var turfName = '';
+    var turfImageUrl = '';
+    
+    if (json['turf'] != null && json['turf'] is Map<String, dynamic>) {
+      // If turf data is nested
+      var turfData = json['turf'] as Map<String, dynamic>;
+      turfId = turfData['id'] ?? 0;
+      turfName = turfData['name'] ?? '';
+      turfImageUrl = turfData['image_url'] ?? '';
+    } else {
+      // If turf data is flat
+      turfId = json['turf_id'] ?? 0;
+      turfName = json['turf_name'] ?? '';
+      turfImageUrl = json['turf_image_url'] ?? '';
+    }
+
+    // Handle time slots that might be combined
+    var startTime = '';
+    var endTime = '';
+    
+    if (json['time_slot'] != null && json['time_slot'] is String) {
+      // Split time slot like "14:00 - 15:00" into start and end times
+      var parts = json['time_slot'].toString().split(' - ');
+      if (parts.length == 2) {
+        startTime = parts[0];
+        endTime = parts[1];
+      } else {
+        startTime = json['time_slot'];
+      }
+    } else {
+      startTime = json['start_time'] ?? '';
+      endTime = json['end_time'] ?? '';
+    }
+
+    // Handle price data
+    var price = 0.0;
+    if (json['total_price'] != null) {
+      price = json['total_price'] is int 
+          ? json['total_price'].toDouble() 
+          : double.tryParse(json['total_price'].toString()) ?? 0.0;
+    } else if (json['price'] != null) {
+      price = json['price'] is int 
+          ? json['price'].toDouble() 
+          : double.tryParse(json['price'].toString()) ?? 0.0;
+    }
+
+    // Get user data
+    var userId = 0;
+    if (json['user'] != null && json['user'] is Map<String, dynamic>) {
+      userId = json['user']['id'] ?? 0;
+    } else {
+      userId = json['user_id'] ?? 0;
+    }
+
+    // Handle negotiation data
+    var isNegotiable = false;
+    var proposedPrice;
+    var message;
+    var ownerResponse;
+
+    if (json['negotiation'] != null && json['negotiation'] is Map<String, dynamic>) {
+      var negotiation = json['negotiation'] as Map<String, dynamic>;
+      isNegotiable = true;
+      proposedPrice = negotiation['proposed_price'] != null 
+          ? (negotiation['proposed_price'] is int 
+              ? negotiation['proposed_price'].toDouble() 
+              : double.tryParse(negotiation['proposed_price'].toString()))
+          : null;
+      message = negotiation['message'];
+      ownerResponse = negotiation['is_accepted'] != null 
+          ? (negotiation['is_accepted'] ? 'accepted' : 'rejected') 
+          : null;
+    } else {
+      isNegotiable = json['is_negotiable'] ?? false;
+      proposedPrice = json['proposed_price'] != null 
+          ? (json['proposed_price'] is int 
+              ? json['proposed_price'].toDouble() 
+              : double.tryParse(json['proposed_price'].toString()))
+          : null;
+      message = json['message'];
+      ownerResponse = json['owner_response'];
+    }
+
     return Booking(
       id: json['id'],
-      userId: json['user_id'] ?? 0, // Add null safety
-      turfId: json['turf_id'],
-      turfName: json['turf_name'] ?? '',
-      turfImageUrl: json['turf_image_url'] ?? '',
+      userId: userId,
+      turfId: turfId,
+      turfName: turfName,
+      turfImageUrl: turfImageUrl,
       bookingDate: json['booking_date'] ?? '',
-      startTime: json['start_time'] ?? '',
-      endTime: json['end_time'] ?? '',
-      price: json['price'] != null ? (json['price'] is int ? json['price'].toDouble() : json['price']) : 0.0,
+      startTime: startTime,
+      endTime: endTime,
+      price: price,
       status: json['status'] ?? '',
       paymentMethod: json['payment_method'],
       isPaid: json['is_paid'] ?? false,
-      isNegotiable: json['is_negotiable'] ?? false,
-      proposedPrice: json['proposed_price'] != null ? (json['proposed_price'] is int ? json['proposed_price'].toDouble() : json['proposed_price']) : null,
-      message: json['message'],
+      isNegotiable: isNegotiable,
+      proposedPrice: proposedPrice,
+      message: message,
       createdAt: json['created_at'] ?? '',
-      ownerResponse: json['owner_response'],
+      ownerResponse: ownerResponse,
     );
   }
 
