@@ -663,7 +663,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
           ),
           
           // Action buttons
-          if (booking.canCancel || booking.canPay || booking.canNegotiate)
+          if (booking.canCancel || booking.canPay || booking.canNegotiate || booking.userCanRespond)
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
               child: Row(
@@ -690,14 +690,24 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     ),
                   ],
                   
-                  if (booking.canNegotiate) ...[
+                  if (booking.userCanRespond) ...[
+                    const SizedBox(width: 8.0),
+                    ElevatedButton(
+                      onPressed: () async {
+                        // Show dialog to accept, reject, or counter offer
+                        await _showRespondToNegotiationDialog(booking);
+                      },
+                      style: AppTheme.secondaryButtonStyle,
+                      child: const Text('Respond to Offer'),
+                    ),
+                  ] else if (booking.canNegotiate) ...[
                     const SizedBox(width: 8.0),
                     ElevatedButton(
                       onPressed: () {
                         _showNegotiationDialog(booking);
                       },
                       style: AppTheme.secondaryButtonStyle,
-                      child: const Text('Negotiation'),
+                      child: const Text('Negotiate'),
                     ),
                   ],
                 ],
@@ -805,6 +815,239 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
         return 'You have no past bookings.\nCompleted or cancelled bookings will appear here.';
       default:
         return 'No bookings found.';
+    }
+  }
+  
+  Future<void> _showRespondToNegotiationDialog(Booking booking) async {
+    final proposedPriceController = TextEditingController(
+      text: booking.proposedPrice?.toString() ?? booking.price.toString()
+    );
+    final messageController = TextEditingController();
+    
+    // Whether the user is making a counter offer or not
+    bool isCounterOffer = false;
+    
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Respond to Negotiation'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Booking #${booking.id} - ${booking.turfName}'),
+                  const SizedBox(height: 8),
+                  Text('Current Offer: \$${booking.proposedPrice?.toStringAsFixed(2) ?? booking.price.toStringAsFixed(2)}'),
+                  const SizedBox(height: 16),
+                  
+                  // Radio buttons for action selection
+                  Row(
+                    children: [
+                      Radio<bool>(
+                        value: false,
+                        groupValue: isCounterOffer,
+                        onChanged: (value) {
+                          setState(() {
+                            isCounterOffer = value!;
+                          });
+                        },
+                      ),
+                      const Text('Accept or Reject Offer'),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Radio<bool>(
+                        value: true,
+                        groupValue: isCounterOffer,
+                        onChanged: (value) {
+                          setState(() {
+                            isCounterOffer = value!;
+                          });
+                        },
+                      ),
+                      const Text('Make Counter Offer'),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  if (isCounterOffer) ...[
+                    // Price input field
+                    TextField(
+                      controller: proposedPriceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Your Counter Price (\$)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        // In a real app, we'd use a proper numeric formatter
+                        // FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 12),
+                  ],
+                  
+                  // Message input field
+                  TextField(
+                    controller: messageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Message (Optional)',
+                      border: OutlineInputBorder(),
+                      hintText: 'Add any additional details...',
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                if (!isCounterOffer) ...[
+                  OutlinedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _submitNegotiationResponse(
+                        booking,
+                        'reject',
+                        null,
+                        messageController.text.trim(),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.errorColor,
+                      side: BorderSide(color: AppTheme.errorColor),
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await _submitNegotiationResponse(
+                        booking,
+                        'accept',
+                        null,
+                        messageController.text.trim(),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.successColor,
+                    ),
+                    child: const Text('Accept'),
+                  ),
+                ] else [
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      
+                      // Validate input
+                      double? proposedPrice;
+                      try {
+                        proposedPrice = double.parse(proposedPriceController.text);
+                        if (proposedPrice <= 0) {
+                          throw Exception('Invalid price');
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please enter a valid price'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                      
+                      await _submitNegotiationResponse(
+                        booking,
+                        'counter',
+                        proposedPrice,
+                        messageController.text.trim(),
+                      );
+                    },
+                    style: AppTheme.secondaryButtonStyle,
+                    child: const Text('Submit Counter Offer'),
+                  ),
+                ],
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+  
+  Future<void> _submitNegotiationResponse(
+    Booking booking,
+    String action,
+    double? proposedPrice,
+    String? message,
+  ) async {
+    // Show loading indicator
+    final loadingSnackBar = SnackBar(
+      content: Row(
+        children: [
+          SizedBox(
+            height: 20,
+            width: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text('Processing your response...'),
+        ],
+      ),
+      duration: const Duration(seconds: 2),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+    
+    try {
+      // Make the API call to submit the negotiation response
+      final token = await _authService.getToken();
+      final bookingService = BookingService(authToken: token);
+      final result = await bookingService.respondToNegotiation(
+        bookingId: booking.id,
+        action: action,
+        proposedPrice: proposedPrice,
+        message: message,
+      );
+      
+      // Add a small delay for better UX
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      // Refresh the bookings list
+      await _loadBookings();
+      
+      // Show success or error message
+      if (result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Response submitted successfully'),
+            backgroundColor: AppTheme.successColor,
+          ),
+        );
+      } else {
+        throw Exception(result['message'] ?? 'Failed to submit response');
+      }
+    } catch (e) {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
     }
   }
 }

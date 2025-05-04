@@ -89,6 +89,18 @@ class Booking {
   bool get canPay => status == 'payment_pending';
 
   bool get canNegotiate => status == 'negotiating';
+  
+  bool get userCanRespond {
+    if (status != 'negotiating') return false;
+    // User can respond if the latest negotiation is from the owner
+    return proposedPrice != null && ownerResponse != null;
+  }
+  
+  bool get ownerCanRespond {
+    if (status != 'negotiating') return false;
+    // Owner can respond if the latest negotiation is from the user
+    return proposedPrice != null && ownerResponse == null;
+  }
 
   bool get isCompleted => status == 'completed';
 

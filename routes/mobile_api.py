@@ -1019,7 +1019,53 @@ def respond_to_negotiation(current_user, booking_id):
             message = 'Counter offer submitted'
         
         # Get updated booking details to return
-        updated_booking = _prepare_booking_for_api(booking)
+        # Prepare booking for API response
+        turf = Turf.query.get(booking.turf_id)
+        
+        # Get latest negotiation if applicable
+        latest_negotiation = None
+        proposed_price = None
+        negotiation_message = None
+        
+        if booking.status == BookingStatus.NEGOTIATING:
+            negotiation = Negotiation.query.filter_by(booking_id=booking.id).order_by(Negotiation.created_at.desc()).first()
+            if negotiation:
+                latest_negotiation = {
+                    'id': negotiation.id,
+                    'proposed_by': negotiation.proposed_by,
+                    'proposed_price': negotiation.proposed_price,
+                    'message': negotiation.message,
+                    'is_accepted': negotiation.is_accepted,
+                    'created_at': negotiation.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                }
+                proposed_price = negotiation.proposed_price
+                negotiation_message = negotiation.message
+        
+        # Get first image URL if available
+        image_url = ""
+        turf_image = TurfImage.query.filter_by(turf_id=turf.id).first()
+        if turf_image:
+            image_url = turf_image.image_url
+            
+        updated_booking = {
+            'id': booking.id,
+            'user_id': booking.user_id,
+            'turf_id': booking.turf_id,
+            'turf_name': turf.name,
+            'turf_image_url': image_url,
+            'booking_date': booking.booking_date.strftime('%Y-%m-%d'),
+            'start_time': booking.start_time.strftime('%H:%M'),
+            'end_time': booking.end_time.strftime('%H:%M'),
+            'price': float(booking.total_price),
+            'status': booking.status,
+            'payment_method': booking.payment_method,
+            'is_paid': booking.is_paid,
+            'is_negotiable': booking.is_negotiable,
+            'proposed_price': proposed_price,
+            'message': negotiation_message,
+            'created_at': booking.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'negotiation': latest_negotiation
+        }
         
         return jsonify({
             'success': True,
