@@ -26,7 +26,7 @@ class ReviewService {
   Future<Map<String, dynamic>> getTurfReviews(int turfId) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/turf/$turfId/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.reviews.replaceAll("{id}", turfId.toString())}'),
         headers: _getHeaders(),
       );
 
@@ -69,7 +69,7 @@ class ReviewService {
 
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/user/reviews'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.userReviews}'),
         headers: _getHeaders(),
       );
 
@@ -114,7 +114,7 @@ class ReviewService {
 
     try {
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/turf/$turfId/review'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.submitReview.replaceAll("{id}", turfId.toString())}'),
         headers: _getHeaders(),
         body: json.encode({
           'rating': rating,
@@ -159,7 +159,7 @@ class ReviewService {
 
     try {
       final response = await http.put(
-        Uri.parse('${ApiConfig.baseUrl}/api/review/$reviewId'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.updateReview.replaceAll("{id}", reviewId.toString())}'),
         headers: _getHeaders(),
         body: json.encode({
           'rating': rating,
@@ -200,7 +200,7 @@ class ReviewService {
 
     try {
       final response = await http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/api/review/$reviewId'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.deleteReview.replaceAll("{id}", reviewId.toString())}'),
         headers: _getHeaders(),
       );
 
@@ -237,7 +237,7 @@ class ReviewService {
 
     try {
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/api/turf/$turfId/can_review'),
+        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.canReviewTurf.replaceAll("{id}", turfId.toString())}'),
         headers: _getHeaders(),
       );
 
