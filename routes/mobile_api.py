@@ -5,7 +5,7 @@ import os
 from werkzeug.security import check_password_hash
 from functools import wraps
 
-from models import User, UserRole, Turf, Review, TimeSlot, Booking, BookingStatus, TurfImage
+from models import User, UserRole, Turf, Review, TimeSlot, Booking, BookingStatus, TurfImage, Negotiation
 from app import db
 
 # Create a blueprint for all mobile API routes
@@ -673,6 +673,417 @@ def advanced_search_turfs():
         return jsonify({
             'success': False,
             'message': f'Error in advanced search: {str(e)}'
+        }), 500
+
+# Booking API Endpoints
+@mobile_api.route('/booking/create', methods=['POST'])
+@token_required
+def create_booking(current_user):
+    """Create a new booking with optional negotiation"""
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            'success': False,
+            'message': 'No data provided'
+        }), 400
+    
+    # Extract booking details
+    turf_id = data.get('turf_id')
+    booking_date = data.get('booking_date')
+    time_slot = data.get('time_slot')
+    payment_option = data.get('payment_option')
+    proposed_price = data.get('proposed_price')
+    message = data.get('message')
+    
+    # Validate required fields
+    if not turf_id or not booking_date or not time_slot:
+        return jsonify({
+            'success': False,
+            'message': 'Turf ID, booking date, and time slot are required'
+        }), 400
+    
+    # Check if turf exists
+    turf = Turf.query.get(turf_id)
+    if not turf:
+        return jsonify({
+            'success': False,
+            'message': 'Turf not found'
+        }), 404
+    
+    # Parse the date
+    try:
+        date_obj = datetime.datetime.strptime(booking_date, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid date format. Use YYYY-MM-DD'
+        }), 400
+    
+    # Parse time slot to get start and end times
+    try:
+        time_parts = time_slot.split(' - ')
+        start_time_str = time_parts[0]
+        end_time_str = time_parts[1]
+        start_time = datetime.datetime.strptime(start_time_str, '%H:%M').time()
+        end_time = datetime.datetime.strptime(end_time_str, '%H:%M').time()
+    except (ValueError, IndexError):
+        return jsonify({
+            'success': False,
+            'message': 'Invalid time slot format. Use HH:MM - HH:MM'
+        }), 400
+    
+    # Calculate price based on turf's base price per hour
+    start_datetime = datetime.datetime.combine(date_obj, start_time)
+    end_datetime = datetime.datetime.combine(date_obj, end_time)
+    duration = (end_datetime - start_datetime).total_seconds() / 3600  # hours
+    total_price = turf.base_price_per_hour * duration
+    
+    # Determine if this is a negotiation or direct booking
+    is_negotiation = payment_option == 'negotiation'
+    
+    # For negotiation, check that proposed price is valid
+    if is_negotiation:
+        if proposed_price is None or float(proposed_price) <= 0:
+            return jsonify({
+                'success': False,
+                'message': 'Proposed price is required for negotiation and must be greater than 0'
+            }), 400
+        
+        # Set pending negotiation status
+        status = BookingStatus.NEGOTIATING
+        payment_method = 'pending_negotiation'
+    else:
+        # Direct booking - use selected payment method
+        status = BookingStatus.PAYMENT_PENDING if payment_option == 'pay_online' else BookingStatus.PENDING
+        payment_method = payment_option
+    
+    # Create the booking
+    try:
+        # Create the booking record
+        booking = Booking(
+            user_id=current_user.id,
+            turf_id=turf_id,
+            booking_date=date_obj,
+            start_time=start_time,
+            end_time=end_time,
+            total_price=total_price if not is_negotiation else float(proposed_price),
+            status=status,
+            payment_method=payment_method,
+            user_proposed_price=float(proposed_price) if is_negotiation else None,
+            message=message
+        )
+        
+        db.session.add(booking)
+        db.session.flush()  # Get the booking ID without committing
+        
+        # Create negotiation record if needed
+        if is_negotiation:
+            negotiation = Negotiation(
+                booking_id=booking.id,
+                proposed_by='user',
+                proposed_price=float(proposed_price),
+                message=message or '',
+                is_accepted=False
+            )
+            db.session.add(negotiation)
+        
+        db.session.commit()
+        
+        # Prepare the response
+        response_data = {
+            'success': True,
+            'booking': {
+                'id': booking.id,
+                'turf_id': booking.turf_id,
+                'turf_name': turf.name,
+                'booking_date': booking_date,
+                'time_slot': time_slot,
+                'total_price': booking.total_price,
+                'status': booking.status,
+                'is_negotiation': is_negotiation
+            }
+        }
+        
+        # Add payment link if online payment is selected
+        if payment_option == 'pay_online' and not is_negotiation:
+            # In a real app, generate a payment URL
+            response_data['redirect_url'] = f'/payment/{booking.id}'
+        
+        if is_negotiation:
+            response_data['message'] = 'Your booking with price negotiation has been submitted'
+        else:
+            response_data['message'] = 'Booking created successfully'
+        
+        return jsonify(response_data), 201
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error creating booking: {str(e)}'
+        }), 500
+
+@mobile_api.route('/bookings/user', methods=['GET'])
+@token_required
+def get_user_bookings(current_user):
+    """Get all bookings for the current user"""
+    try:
+        bookings = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.created_at.desc()).all()
+        
+        bookings_data = []
+        for booking in bookings:
+            turf = Turf.query.get(booking.turf_id)
+            
+            # Get latest negotiation if applicable
+            latest_negotiation = None
+            if booking.status == BookingStatus.NEGOTIATING:
+                negotiation = Negotiation.query.filter_by(booking_id=booking.id).order_by(Negotiation.created_at.desc()).first()
+                if negotiation:
+                    latest_negotiation = {
+                        'id': negotiation.id,
+                        'proposed_by': negotiation.proposed_by,
+                        'proposed_price': negotiation.proposed_price,
+                        'message': negotiation.message,
+                        'is_accepted': negotiation.is_accepted,
+                        'created_at': negotiation.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+            
+            booking_data = {
+                'id': booking.id,
+                'turf': {
+                    'id': turf.id,
+                    'name': turf.name,
+                    'address': turf.address,
+                    'city': turf.city
+                },
+                'booking_date': booking.booking_date.strftime('%Y-%m-%d'),
+                'time_slot': f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}",
+                'total_price': booking.total_price,
+                'status': booking.status,
+                'payment_method': booking.payment_method,
+                'created_at': booking.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'negotiation': latest_negotiation
+            }
+            
+            bookings_data.append(booking_data)
+        
+        return jsonify({
+            'success': True,
+            'bookings': bookings_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching bookings: {str(e)}'
+        }), 500
+
+@mobile_api.route('/booking/<int:booking_id>/negotiation', methods=['POST'])
+@token_required
+def respond_to_negotiation(current_user, booking_id):
+    """Submit a counter offer or accept/reject a negotiation"""
+    data = request.get_json()
+    if not data:
+        return jsonify({
+            'success': False,
+            'message': 'No data provided'
+        }), 400
+    
+    # Extract negotiation data
+    action = data.get('action')
+    proposed_price = data.get('proposed_price')
+    message = data.get('message', '')
+    
+    if not action:
+        return jsonify({
+            'success': False,
+            'message': 'Action is required (accept, reject, counter)'
+        }), 400
+    
+    # Validate action
+    if action not in ['accept', 'reject', 'counter']:
+        return jsonify({
+            'success': False,
+            'message': 'Invalid action. Must be accept, reject, or counter'
+        }), 400
+    
+    # Get the booking
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({
+            'success': False,
+            'message': 'Booking not found'
+        }), 404
+    
+    # Check if user owns this booking or is the turf owner
+    turf = Turf.query.get(booking.turf_id)
+    is_turf_owner = (current_user.id == turf.owner_id)
+    is_booking_user = (current_user.id == booking.user_id)
+    
+    if not (is_turf_owner or is_booking_user):
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to modify this booking'
+        }), 403
+    
+    # Check if booking is in negotiation status
+    if booking.status != BookingStatus.NEGOTIATING:
+        return jsonify({
+            'success': False,
+            'message': 'This booking is not in negotiation status'
+        }), 400
+    
+    # Get the latest negotiation
+    latest_negotiation = Negotiation.query.filter_by(booking_id=booking_id).order_by(Negotiation.created_at.desc()).first()
+    if not latest_negotiation:
+        return jsonify({
+            'success': False,
+            'message': 'No negotiation found for this booking'
+        }), 404
+    
+    # Check if current user is the correct party to respond
+    current_party = 'owner' if is_turf_owner else 'user'
+    expected_party = 'owner' if latest_negotiation.proposed_by == 'user' else 'user'
+    
+    if current_party != expected_party:
+        return jsonify({
+            'success': False,
+            'message': 'It is not your turn to respond to this negotiation'
+        }), 403
+    
+    try:
+        if action == 'accept':
+            # Accept the negotiation
+            latest_negotiation.is_accepted = True
+            
+            # Update booking status based on payment option
+            booking.status = BookingStatus.PAYMENT_PENDING
+            booking.total_price = latest_negotiation.proposed_price
+            
+            # If we need to collect payment, update payment method
+            if booking.payment_method == 'pending_negotiation':
+                booking.payment_method = 'pay_on_arrival'  # Default to pay on arrival until payment is selected
+                
+        elif action == 'reject':
+            # Reject the negotiation - cancel the booking
+            booking.status = BookingStatus.CANCELLED
+            
+        elif action == 'counter':
+            # Submit counter offer
+            if proposed_price is None or float(proposed_price) <= 0:
+                return jsonify({
+                    'success': False,
+                    'message': 'Proposed price is required for counter offer and must be greater than 0'
+                }), 400
+            
+            # Create new negotiation record
+            negotiation = Negotiation(
+                booking_id=booking_id,
+                proposed_by=current_party,
+                proposed_price=float(proposed_price),
+                message=message,
+                is_accepted=False
+            )
+            db.session.add(negotiation)
+        
+        db.session.commit()
+        
+        # Prepare response message
+        if action == 'accept':
+            message = 'Negotiation accepted'
+        elif action == 'reject':
+            message = 'Negotiation rejected and booking cancelled'
+        else:
+            message = 'Counter offer submitted'
+        
+        return jsonify({
+            'success': True,
+            'message': message,
+            'action': action,
+            'booking_id': booking_id
+        })
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': f'Error processing negotiation: {str(e)}'
+        }), 500
+
+@mobile_api.route('/bookings/owner', methods=['GET'])
+@token_required
+def get_owner_bookings(current_user):
+    """Get all bookings for turfs owned by the current user"""
+    # Check if user is an owner
+    if current_user.role != UserRole.OWNER and current_user.role != UserRole.ADMIN:
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to view owner bookings'
+        }), 403
+    
+    try:
+        # Get all turfs owned by the user
+        turfs = Turf.query.filter_by(owner_id=current_user.id).all()
+        turf_ids = [turf.id for turf in turfs]
+        
+        if not turf_ids:
+            return jsonify({
+                'success': True,
+                'bookings': []
+            })
+        
+        # Get all bookings for these turfs
+        bookings = Booking.query.filter(Booking.turf_id.in_(turf_ids)).order_by(Booking.created_at.desc()).all()
+        
+        bookings_data = []
+        for booking in bookings:
+            turf = Turf.query.get(booking.turf_id)
+            user = User.query.get(booking.user_id)
+            
+            # Get latest negotiation if applicable
+            latest_negotiation = None
+            if booking.status == BookingStatus.NEGOTIATING:
+                negotiation = Negotiation.query.filter_by(booking_id=booking.id).order_by(Negotiation.created_at.desc()).first()
+                if negotiation:
+                    latest_negotiation = {
+                        'id': negotiation.id,
+                        'proposed_by': negotiation.proposed_by,
+                        'proposed_price': negotiation.proposed_price,
+                        'message': negotiation.message,
+                        'is_accepted': negotiation.is_accepted,
+                        'created_at': negotiation.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+            
+            booking_data = {
+                'id': booking.id,
+                'turf': {
+                    'id': turf.id,
+                    'name': turf.name,
+                },
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'phone_number': user.phone_number
+                },
+                'booking_date': booking.booking_date.strftime('%Y-%m-%d'),
+                'time_slot': f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}",
+                'total_price': booking.total_price,
+                'status': booking.status,
+                'payment_method': booking.payment_method,
+                'created_at': booking.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'negotiation': latest_negotiation,
+                'message': booking.message
+            }
+            
+            bookings_data.append(booking_data)
+        
+        return jsonify({
+            'success': True,
+            'bookings': bookings_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching owner bookings: {str(e)}'
         }), 500
 
 # Reviews API Endpoints
