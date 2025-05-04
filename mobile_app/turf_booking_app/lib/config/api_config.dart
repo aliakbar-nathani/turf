@@ -1,7 +1,16 @@
 class ApiConfig {
   // Base URL for the API - this will need to be updated based on deployment
-  static const String baseUrl = 'http://10.0.2.2:5000'; // Android emulator pointing to localhost
-  // static const String baseUrl = 'http://localhost:5000'; // For iOS simulator
+  static String get baseUrl {
+    // For web platform, use the dynamic host
+    if (Uri.base.toString() != 'null') {
+      return 'https://${Uri.base.host}:5000';
+    }
+    // Default fallbacks
+    return 'http://localhost:5000'; // Default to localhost
+  }
+  // Alternative URLs for different environments:
+  // 'http://10.0.2.2:5000' - Android emulator pointing to localhost
+  // 'http://localhost:5000' - For iOS simulator
 
   // Authentication endpoints
   static const String login = '/auth/login';
