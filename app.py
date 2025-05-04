@@ -28,7 +28,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for
 # Enable CORS for all routes and origins
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, 
      methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-     allow_headers=["Authorization", "Content-Type", "Accept", "Origin"])
+     allow_headers=["Authorization", "Content-Type", "Accept", "Origin", "X-CSRF-Token", "X-Requested-With"],
+     expose_headers=["Content-Type", "Authorization"])
 
 # Add hasattr to Jinja environment
 app.jinja_env.globals.update(hasattr=hasattr)
@@ -59,8 +60,20 @@ def handle_csrf_error(e):
 # Exempt all API routes from CSRF protection
 @app.before_request
 def csrf_exempt_api_routes():
-    if request.path.startswith('/api/mobile/') or request.path.startswith('/auth/api/'):
-        csrf.exempt(request.endpoint)
+    # Paths to exempt from CSRF protection
+    csrf_exempt_paths = [
+        '/api/mobile/',
+        '/auth/api/',
+        '/payment/mobile-',  # Mobile payment endpoints
+        '/payment/webhook',  # Stripe webhook endpoint
+    ]
+    
+    if any(request.path.startswith(path) for path in csrf_exempt_paths):
+        if request.endpoint:  # Only exempt if endpoint exists
+            csrf.exempt(request.endpoint)
+        # Skip CSRF for OPTIONS requests (CORS preflight)
+        if request.method == 'OPTIONS':
+            return jsonify({'success': True}), 200
 
 # Initialize database with app
 db.init_app(app)
