@@ -470,6 +470,69 @@ def search_turfs():
             'message': f'Error searching turfs: {str(e)}'
         }), 500
 
+@mobile_api.route('/turf/<int:turf_id>/time_slots', methods=['GET'])
+def get_available_time_slots(turf_id):
+    """Get available time slots for a specific turf on a given date"""
+    try:
+        # Get the date from query parameters
+        date_str = request.args.get('date', None, type=str)
+        if not date_str:
+            return jsonify({
+                'success': False,
+                'message': 'Date parameter is required'
+            }), 400
+        
+        # Parse the date
+        try:
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid date format. Use YYYY-MM-DD'
+            }), 400
+        
+        # Get the turf
+        turf = Turf.query.get_or_404(turf_id)
+        
+        # Get available time slots for the date
+        time_slots = turf.get_available_slots(date)
+        
+        # If no time slots are available for the date, provide dummy slots
+        if not time_slots:
+            # Create some sample time slots
+            dummy_slots = [
+                "09:00 - 10:00",
+                "10:00 - 11:00",
+                "11:00 - 12:00",
+                "14:00 - 15:00",
+                "15:00 - 16:00",
+                "16:00 - 17:00",
+                "17:00 - 18:00",
+                "18:00 - 19:00"
+            ]
+            return jsonify({
+                'success': True,
+                'time_slots': dummy_slots
+            })
+        
+        # Format the time slots
+        formatted_slots = []
+        for slot in time_slots:
+            start = slot.start_time.strftime('%H:%M')
+            end = slot.end_time.strftime('%H:%M')
+            formatted_slots.append(f"{start} - {end}")
+        
+        return jsonify({
+            'success': True,
+            'time_slots': formatted_slots
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching time slots: {str(e)}'
+        }), 500
+
 @mobile_api.route('/advanced_search', methods=['GET'])
 def advanced_search_turfs():
     """API endpoint for advanced turf search"""

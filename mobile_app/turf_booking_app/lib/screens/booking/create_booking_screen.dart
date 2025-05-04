@@ -129,8 +129,13 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       _errorMessage = null;
     });
     
+    // Handle booking based on negotiation status
+    String paymentOption = '';
     double? proposedPrice;
+    
     if (_isNegotiating) {
+      // When negotiating, set payment_option to negotiation
+      paymentOption = 'negotiation';
       proposedPrice = double.tryParse(_proposedPriceController.text);
       
       // Validate proposed price
@@ -141,13 +146,16 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         });
         return;
       }
+    } else {
+      // When not negotiating, use selected payment option
+      paymentOption = _paymentOption;
     }
     
     final result = await _bookingService.createBooking(
       turfId: widget.turf.id,
       bookingDate: _selectedDate!,
       timeSlot: _selectedTimeSlot!,
-      paymentOption: _paymentOption,
+      paymentOption: paymentOption,
       proposedPrice: proposedPrice,
       message: _messageController.text.isNotEmpty ? _messageController.text : null,
     );
@@ -159,18 +167,27 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     if (result['success']) {
       if (!mounted) return;
       
-      // Show success message and navigate to appropriate screen
+      // Customize message based on negotiation status
+      String successMessage;
+      if (_isNegotiating) {
+        successMessage = 'Your price offer has been submitted to the owner for review';
+      } else {
+        successMessage = result['message'] ?? 'Booking created successfully';
+      }
+      
+      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result['message']),
+          content: Text(successMessage),
           backgroundColor: AppTheme.successColor,
         ),
       );
       
-      // If redirect URL is provided (for payment), handle it
-      if (result.containsKey('redirectUrl') && 
+      // Handle redirect based on booking type
+      if (!_isNegotiating && 
+          result.containsKey('redirectUrl') && 
           result['redirectUrl'] != null && 
-          _paymentOption == 'pay_online') {
+          paymentOption == 'pay_online') {
         // TODO: Navigate to webview with payment URL
         // For now, just go back to the previous screen
         Navigator.pop(context);
@@ -436,8 +453,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               
               const SizedBox(height: 24.0),
               
-              // Payment options
-              Column(
+              // Payment options only shown if not negotiating
+              if (!_isNegotiating) Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
@@ -610,9 +627,9 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text(
-                          'Book Now',
-                          style: TextStyle(
+                      : Text(
+                          _isNegotiating ? 'Submit Offer' : 'Book Now',
+                          style: const TextStyle(
                             fontSize: 18.0,
                             fontWeight: FontWeight.bold,
                           ),
