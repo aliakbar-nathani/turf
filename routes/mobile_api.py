@@ -847,6 +847,7 @@ def create_booking(current_user):
         }), 500
 
 @mobile_api.route('/bookings/user', methods=['GET'])
+@mobile_api.route('/user/bookings', methods=['GET'])  # Add the endpoint the mobile app is using
 @token_required
 def get_user_bookings(current_user):
     """Get all bookings for the current user"""
@@ -1083,6 +1084,7 @@ def respond_to_negotiation(current_user, booking_id):
         }), 500
 
 @mobile_api.route('/bookings/owner', methods=['GET'])
+@mobile_api.route('/owner/bookings', methods=['GET'])  # Add the endpoint the mobile app is using
 @token_required
 def get_owner_bookings(current_user):
     """Get all bookings for turfs owned by the current user"""
