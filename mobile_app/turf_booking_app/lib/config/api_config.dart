@@ -13,9 +13,9 @@ class ApiConfig {
   // 'http://localhost:5000' - For iOS simulator
 
   // Authentication endpoints
-  static const String login = '/auth/login';
-  static const String register = '/auth/register';
-  static const String registerOwner = '/auth/register_owner';
+  static const String login = '/auth/api/login';
+  static const String register = '/auth/api/register';
+  static const String registerOwner = '/auth/api/register_owner';
   
   // Turf endpoints
   static const String turfs = '/turf/list';
