@@ -467,7 +467,8 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
                   runSpacing: 8.0,
                   children: [
                     _buildFeatureCard('Type', _turf!.indoor ? 'Indoor' : 'Outdoor', Icons.home_work),
-                    _buildFeatureCard('Surface', _turf!.surfaceType, Icons.grass),
+                    if (_turf!.surfaceType != null && _turf!.surfaceType!.isNotEmpty)
+                      _buildFeatureCard('Surface', _turf!.surfaceType!, Icons.grass),
                     if (_turf!.size != null && _turf!.size!.isNotEmpty)
                       _buildFeatureCard('Size', _turf!.size!, Icons.aspect_ratio),
                     if (_turf!.hasParking)

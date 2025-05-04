@@ -455,10 +455,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         turf.indoor ? 'Indoor' : 'Outdoor',
                         Icons.home_work,
                       ),
-                      _buildFeatureChip(
-                        turf.surfaceType,
-                        Icons.grass,
-                      ),
+                      if (turf.surfaceType != null && turf.surfaceType!.isNotEmpty)
+                        _buildFeatureChip(
+                          turf.surfaceType!,
+                          Icons.grass,
+                        ),
                       if (turf.hasParking)
                         _buildFeatureChip('Parking', Icons.local_parking),
                     ],
