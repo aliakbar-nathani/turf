@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../config/app_theme.dart';
 import '../../services/turf_service.dart';
-import '../../services/auth_service.dart';
+import '../../widgets/custom_textfield.dart';
 import '../../models/turf_model.dart';
 
 class OwnerAddTurfScreen extends StatefulWidget {
-  const OwnerAddTurfScreen({super.key});
+  final Turf? turf; // Optional turf for editing mode
+  
+  const OwnerAddTurfScreen({super.key, this.turf});
 
   @override
   State<OwnerAddTurfScreen> createState() => _OwnerAddTurfScreenState();
 }
 
 class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
-  final AuthService _authService = AuthService();
-  late TurfService _turfService;
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
   
-  // Text controllers
+  // Form controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
@@ -26,7 +24,7 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
   final _stateController = TextEditingController();
   final _countryController = TextEditingController();
   final _postalCodeController = TextEditingController();
-  final _priceController = TextEditingController();
+  final _basePriceController = TextEditingController();
   final _featuresController = TextEditingController();
   final _sizeController = TextEditingController();
   final _imageUrlController = TextEditingController();
@@ -39,12 +37,54 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
   bool _hasShower = false;
   bool _hasFloodlights = false;
   bool _hasEquipment = false;
-  String _surfaceType = 'artificial';
+  String _surfaceType = 'grass';
+  
+  bool _isLoading = false;
+  bool _isEditMode = false;
+  
+  // Surface type options
+  final List<Map<String, dynamic>> _surfaceTypes = [
+    {'value': 'grass', 'label': 'Grass'},
+    {'value': 'artificial', 'label': 'Artificial Turf'},
+    {'value': 'indoor', 'label': 'Indoor'},
+    {'value': 'clay', 'label': 'Clay'},
+    {'value': 'concrete', 'label': 'Concrete'},
+    {'value': 'other', 'label': 'Other'},
+  ];
   
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _isEditMode = widget.turf != null;
+    if (_isEditMode) {
+      _populateFormWithTurfData();
+    }
+  }
+  
+  void _populateFormWithTurfData() {
+    final turf = widget.turf!;
+    _nameController.text = turf.name;
+    _descriptionController.text = turf.description ?? '';
+    _addressController.text = turf.address;
+    _cityController.text = turf.city;
+    _stateController.text = turf.state;
+    _countryController.text = turf.country;
+    _postalCodeController.text = turf.postalCode;
+    _basePriceController.text = turf.basePricePerHour.toString();
+    _featuresController.text = turf.features?.join(', ') ?? '';
+    _sizeController.text = turf.size ?? '';
+    _imageUrlController.text = turf.imageUrl ?? '';
+    _additionalImagesController.text = turf.additionalImages?.join(', ') ?? '';
+    
+    setState(() {
+      _indoor = turf.indoor ?? false;
+      _hasParking = turf.hasParking ?? false;
+      _hasChangingRoom = turf.hasChangingRoom ?? false;
+      _hasShower = turf.hasShower ?? false;
+      _hasFloodlights = turf.hasFloodlights ?? false;
+      _hasEquipment = turf.hasEquipment ?? false;
+      _surfaceType = turf.surfaceType ?? 'grass';
+    });
   }
   
   @override
@@ -56,7 +96,7 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
     _stateController.dispose();
     _countryController.dispose();
     _postalCodeController.dispose();
-    _priceController.dispose();
+    _basePriceController.dispose();
     _featuresController.dispose();
     _sizeController.dispose();
     _imageUrlController.dispose();
@@ -64,22 +104,8 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
     super.dispose();
   }
   
-  Future<void> _initialize() async {
-    final token = await _authService.getToken();
-    setState(() {
-      _turfService = TurfService(authToken: token);
-    });
-  }
-  
   Future<void> _saveTurf() async {
     if (!_formKey.currentState!.validate()) {
-      // Show error if validation fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please correct the errors in the form'),
-          backgroundColor: Colors.red,
-        ),
-      );
       return;
     }
     
@@ -88,18 +114,18 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
     });
     
     try {
-      // Prepare the turf data
+      final turfService = TurfService();
       final turfData = {
-        'name': _nameController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'address': _addressController.text.trim(),
-        'city': _cityController.text.trim(),
-        'state': _stateController.text.trim(),
-        'country': _countryController.text.trim(),
-        'postal_code': _postalCodeController.text.trim(),
-        'base_price_per_hour': double.parse(_priceController.text.trim()),
-        'features': _featuresController.text.trim(),
-        'size': _sizeController.text.trim(),
+        'name': _nameController.text,
+        'description': _descriptionController.text,
+        'address': _addressController.text,
+        'city': _cityController.text,
+        'state': _stateController.text,
+        'country': _countryController.text,
+        'postal_code': _postalCodeController.text,
+        'base_price_per_hour': double.parse(_basePriceController.text),
+        'features': _featuresController.text,
+        'size': _sizeController.text,
         'indoor': _indoor,
         'has_parking': _hasParking,
         'has_changing_room': _hasChangingRoom,
@@ -107,53 +133,42 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
         'has_floodlights': _hasFloodlights,
         'has_equipment': _hasEquipment,
         'surface_type': _surfaceType,
-        'image_url': _imageUrlController.text.trim(),
-        'additional_images': _additionalImagesController.text.trim(),
+        'image_url': _imageUrlController.text,
+        'additional_images': _additionalImagesController.text,
       };
       
-      // Save the turf
-      final result = await _turfService.createTurf(turfData);
-      
-      if (!mounted) return;
+      final result = _isEditMode
+          ? await turfService.updateTurf(widget.turf!.id, turfData)
+          : await turfService.createTurf(turfData);
       
       setState(() {
         _isLoading = false;
       });
       
       if (result['success']) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Turf added successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        
-        // Navigate back to previous screen
-        Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+          Navigator.pop(context, result['turf']);
+        }
       } else {
-        // Show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Failed to add turf'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'])),
+          );
+        }
       }
     } catch (e) {
-      if (!mounted) return;
-      
       setState(() {
         _isLoading = false;
       });
       
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
   
@@ -161,380 +176,273 @@ class _OwnerAddTurfScreenState extends State<OwnerAddTurfScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Turf'),
+        title: Text(_isEditMode ? 'Edit Turf' : 'Add New Turf'),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Basic Information Section
                     const Text(
                       'Basic Information',
                       style: TextStyle(
-                        fontSize: 18.0,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Name field
-                    TextFormField(
+                    const SizedBox(height: 16),
+                    CustomTextField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Turf Name *',
-                        hintText: 'Enter turf name',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Turf Name',
+                      hint: 'Enter turf name',
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Turf name is required';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a turf name';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Description field
-                    TextFormField(
+                    const SizedBox(height: 12),
+                    CustomTextField(
                       controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        hintText: 'Enter turf description',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Description',
+                      hint: 'Enter turf description',
                       maxLines: 3,
                     ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Price field
-                    TextFormField(
-                      controller: _priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Base Price per Hour ($) *',
-                        hintText: 'Example: 50.00',
-                        border: OutlineInputBorder(),
-                        prefixText: '\$ ',
-                      ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _basePriceController,
+                      label: 'Base Price per Hour',
+                      hint: 'Enter base price per hour',
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                      ],
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Price is required';
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a base price';
                         }
-                        try {
-                          final price = double.parse(value);
-                          if (price <= 0) {
-                            return 'Price must be greater than zero';
-                          }
-                        } catch (e) {
-                          return 'Please enter a valid price';
+                        if (double.tryParse(value) == null) {
+                          return 'Please enter a valid number';
                         }
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24.0),
-                    
-                    const Text(
-                      'Location Details',
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Address field
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(
-                        labelText: 'Address *',
-                        hintText: 'Enter turf address',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Address is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // City field
-                    TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'City *',
-                        hintText: 'Enter city',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'City is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Two column layout for state and postal code
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _stateController,
-                            decoration: const InputDecoration(
-                              labelText: 'State/Province *',
-                              hintText: 'Enter state',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'State is required';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16.0),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _postalCodeController,
-                            decoration: const InputDecoration(
-                              labelText: 'Postal Code *',
-                              hintText: 'Enter postal code',
-                              border: OutlineInputBorder(),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Postal code is required';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Country field
-                    TextFormField(
-                      controller: _countryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Country *',
-                        hintText: 'Enter country',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Country is required';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24.0),
-                    
-                    const Text(
-                      'Turf Specifications',
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Size field
-                    TextFormField(
+                    const SizedBox(height: 12),
+                    CustomTextField(
                       controller: _sizeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Size (e.g., 5-a-side, 11-a-side)',
-                        hintText: 'Enter turf size',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Size (e.g., 5-a-side)',
+                      hint: 'Enter turf size',
                     ),
-                    const SizedBox(height: 16.0),
                     
-                    // Features field
-                    TextFormField(
-                      controller: _featuresController,
-                      decoration: const InputDecoration(
-                        labelText: 'Features (comma-separated)',
-                        hintText: 'Example: WiFi, Scoreboards, Seating',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Surface type dropdown
-                    DropdownButtonFormField<String>(
-                      value: _surfaceType,
-                      decoration: const InputDecoration(
-                        labelText: 'Surface Type',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'grass',
-                          child: Text('Grass'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'artificial',
-                          child: Text('Artificial Turf'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'indoor',
-                          child: Text('Indoor'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'clay',
-                          child: Text('Clay'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'concrete',
-                          child: Text('Concrete'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'other',
-                          child: Text('Other'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _surfaceType = value ?? 'artificial';
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Amenities checkboxes
+                    const SizedBox(height: 24),
+                    // Location Section
                     const Text(
-                      'Amenities',
+                      'Location',
                       style: TextStyle(
-                        fontSize: 16.0,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    CheckboxListTile(
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      controller: _addressController,
+                      label: 'Address',
+                      hint: 'Enter turf address',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter an address';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _cityController,
+                      label: 'City',
+                      hint: 'Enter city',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a city';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _stateController,
+                      label: 'State/Province',
+                      hint: 'Enter state or province',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a state or province';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _countryController,
+                      label: 'Country',
+                      hint: 'Enter country',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a country';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _postalCodeController,
+                      label: 'Postal Code',
+                      hint: 'Enter postal code',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a postal code';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    // Features Section
+                    const Text(
+                      'Features',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Indoor/Outdoor Switch
+                    SwitchListTile(
                       title: const Text('Indoor Turf'),
                       value: _indoor,
                       onChanged: (value) {
                         setState(() {
-                          _indoor = value ?? false;
+                          _indoor = value;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
+                    
+                    // Surface Type Dropdown
+                    DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Surface Type',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _surfaceType,
+                      items: _surfaceTypes.map((type) {
+                        return DropdownMenuItem<String>(
+                          value: type['value'],
+                          child: Text(type['label']),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _surfaceType = value!;
+                        });
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    // Feature checkboxes
                     CheckboxListTile(
                       title: const Text('Parking Available'),
                       value: _hasParking,
                       onChanged: (value) {
                         setState(() {
-                          _hasParking = value ?? false;
+                          _hasParking = value!;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     CheckboxListTile(
                       title: const Text('Changing Rooms'),
                       value: _hasChangingRoom,
                       onChanged: (value) {
                         setState(() {
-                          _hasChangingRoom = value ?? false;
+                          _hasChangingRoom = value!;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     CheckboxListTile(
                       title: const Text('Showers'),
                       value: _hasShower,
                       onChanged: (value) {
                         setState(() {
-                          _hasShower = value ?? false;
+                          _hasShower = value!;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     CheckboxListTile(
                       title: const Text('Floodlights'),
                       value: _hasFloodlights,
                       onChanged: (value) {
                         setState(() {
-                          _hasFloodlights = value ?? false;
+                          _hasFloodlights = value!;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
                     CheckboxListTile(
                       title: const Text('Equipment Available'),
                       value: _hasEquipment,
                       onChanged: (value) {
                         setState(() {
-                          _hasEquipment = value ?? false;
+                          _hasEquipment = value!;
                         });
                       },
-                      contentPadding: EdgeInsets.zero,
+                      activeColor: AppTheme.primaryColor,
                     ),
-                    const SizedBox(height: 24.0),
                     
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      controller: _featuresController,
+                      label: 'Additional Features (comma-separated)',
+                      hint: 'E.g., Cafe, Pro shop, Fan zone',
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    // Images Section
                     const Text(
                       'Images',
                       style: TextStyle(
-                        fontSize: 18.0,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Image URL field
-                    TextFormField(
+                    const SizedBox(height: 16),
+                    CustomTextField(
                       controller: _imageUrlController,
-                      decoration: const InputDecoration(
-                        labelText: 'Primary Image URL',
-                        hintText: 'Enter URL for main turf image',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Primary Image URL',
+                      hint: 'Enter primary image URL',
                     ),
-                    const SizedBox(height: 16.0),
-                    
-                    // Additional images field
-                    TextFormField(
+                    const SizedBox(height: 12),
+                    CustomTextField(
                       controller: _additionalImagesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Additional Image URLs (comma-separated)',
-                        hintText: 'Enter URLs for additional images',
-                        border: OutlineInputBorder(),
-                      ),
+                      label: 'Additional Image URLs (comma-separated)',
+                      hint: 'Enter additional image URLs separated by commas',
+                      maxLines: 3,
                     ),
-                    const SizedBox(height: 32.0),
                     
-                    // Submit button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _saveTurf,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                        ),
-                        child: const Text(
-                          'Add Turf',
-                          style: TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: _saveTurf,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
                       ),
+                      child: Text(_isEditMode ? 'Update Turf' : 'Add Turf'),
                     ),
-                    const SizedBox(height: 24.0),
                   ],
                 ),
               ),
