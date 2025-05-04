@@ -1,7 +1,7 @@
 import os
 import logging
 
-from flask import Flask, request
+from flask import Flask, request, Blueprint
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -45,12 +45,12 @@ from flask_wtf.csrf import CSRFProtect
 csrf = CSRFProtect()
 csrf.init_app(app)
 
-# Exempt API routes from CSRF protection
-@csrf.exempt
-def csrf_exempt_api():
-    if request.path.startswith('/auth/api/'):
-        return True
-    return False
+# Create a function to wrap our API blueprints with CSRF exemption
+def create_csrf_exempt_blueprint(name, import_name, **kwargs):
+    """Create a blueprint that's exempt from CSRF protection"""
+    bp = Blueprint(name, import_name, **kwargs)
+    csrf.exempt(bp)
+    return bp
 
 # Initialize database with app
 db.init_app(app)
@@ -80,6 +80,7 @@ with app.app_context():
     from routes.reviews import reviews_bp
     from routes.favorites import favorites
     from routes.notifications import notifications
+    from routes.mobile_api import mobile_api
     
     # Register blueprints
     app.register_blueprint(auth, url_prefix='/auth')
@@ -92,6 +93,10 @@ with app.app_context():
     app.register_blueprint(favorites)  
     app.register_blueprint(notifications)
     app.register_blueprint(home)
+    
+    # Register mobile API blueprint with CSRF exemption
+    csrf.exempt(mobile_api)
+    app.register_blueprint(mobile_api, url_prefix='/api/mobile')
     
     # User loader for Flask-Login
     @login_manager.user_loader

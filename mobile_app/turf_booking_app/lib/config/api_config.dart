@@ -13,9 +13,9 @@ class ApiConfig {
   // 'http://localhost:5000' - For iOS simulator
 
   // Authentication endpoints
-  static const String login = '/auth/api/login';
-  static const String register = '/auth/api/register';
-  static const String registerOwner = '/auth/api/register_owner';
+  static const String login = '/api/mobile/login';
+  static const String register = '/api/mobile/register';
+  static const String registerOwner = '/api/mobile/register';
   
   // Turf endpoints
   static const String turfs = '/turf/list';
@@ -42,13 +42,13 @@ class ApiConfig {
   static const String paymentMethods = '/payment/methods';
   
   // Review endpoints
-  static const String reviews = '/turf/{id}/reviews';
-  static const String submitReview = '/turf/{id}/review';
-  static const String updateReview = '/review/{id}';
-  static const String deleteReview = '/review/{id}';
-  static const String respondToReview = '/owner/review/{id}/respond';
-  static const String userReviews = '/user/reviews';
-  static const String canReviewTurf = '/turf/{id}/can_review';
+  static const String reviews = '/api/mobile/turf/{id}/reviews';
+  static const String submitReview = '/api/mobile/turf/{id}/review';
+  static const String updateReview = '/api/mobile/review/{id}';
+  static const String deleteReview = '/api/mobile/review/{id}';
+  static const String respondToReview = '/api/mobile/owner/review/{id}/respond';
+  static const String userReviews = '/api/mobile/user/reviews';
+  static const String canReviewTurf = '/api/mobile/turf/{id}/can_review';
 }
 
 class AppConstants {
