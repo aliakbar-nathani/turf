@@ -1,7 +1,7 @@
 import os
 import logging
 
-from flask import Flask, request, Blueprint
+from flask import Flask, request, Blueprint, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -39,18 +39,26 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Configure CSRF for the whole app except API routes
-from flask_wtf.csrf import CSRFProtect
+# Configure CSRF protection
+from flask_wtf.csrf import CSRFProtect, CSRFError
 
 csrf = CSRFProtect()
 csrf.init_app(app)
 
-# Create a function to wrap our API blueprints with CSRF exemption
-def create_csrf_exempt_blueprint(name, import_name, **kwargs):
-    """Create a blueprint that's exempt from CSRF protection"""
-    bp = Blueprint(name, import_name, **kwargs)
-    csrf.exempt(bp)
-    return bp
+# Handle CSRF errors
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    if request.path.startswith('/api/mobile/') or request.path.startswith('/auth/api/'):
+        # For API requests, return JSON error
+        return jsonify({'success': False, 'message': 'CSRF token is missing or invalid'}), 400
+    # For regular web requests, render error template
+    return render_template('error.html', message='CSRF token is missing or invalid'), 400
+
+# Exempt all API routes from CSRF protection
+@app.before_request
+def csrf_exempt_api_routes():
+    if request.path.startswith('/api/mobile/') or request.path.startswith('/auth/api/'):
+        csrf.exempt(request.endpoint)
 
 # Initialize database with app
 db.init_app(app)
