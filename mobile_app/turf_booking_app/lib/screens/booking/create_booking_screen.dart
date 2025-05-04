@@ -99,12 +99,34 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       _isLoadingTimeSlots = false;
       
       if (result['success']) {
-        _availableTimeSlots = List<String>.from(result['timeSlots']);
-        
-        if (_availableTimeSlots.isEmpty) {
-          _errorMessage = 'No available time slots for the selected date';
+        // Handle the new time slot format
+        final slots = result['timeSlots'];
+        if (slots is List) {
+          if (slots.isEmpty) {
+            _errorMessage = 'No available time slots for the selected date';
+          } else {
+            // Extract the value field from each time slot object if it's a map
+            // Or use the string directly if the time slot is a string
+            _availableTimeSlots = slots.map<String>((slot) {
+              if (slot is Map<String, dynamic> && slot.containsKey('value')) {
+                return slot['value'] as String;
+              } else if (slot is String) {
+                return slot;
+              }
+              return '';
+            }).toList();
+            
+            // Remove any empty strings that might have been created
+            _availableTimeSlots.removeWhere((slot) => slot.isEmpty);
+            
+            if (_availableTimeSlots.isEmpty) {
+              _errorMessage = 'No available time slots for the selected date';
+            } else {
+              _errorMessage = null;
+            }
+          }
         } else {
-          _errorMessage = null;
+          _errorMessage = 'Invalid time slot data format';
         }
       } else {
         _errorMessage = result['message'];

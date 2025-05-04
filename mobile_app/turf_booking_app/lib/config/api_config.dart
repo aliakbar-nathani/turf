@@ -25,22 +25,22 @@ class ApiConfig {
   static const String advancedSearch = '/api/mobile/advanced_search';
   
   // Booking endpoints
-  static const String bookings = '/user/bookings';
-  static const String createBooking = '/booking/create';
-  static const String ownerBookings = '/owner/bookings';
+  static const String bookings = '/api/mobile/user/bookings';
+  static const String createBooking = '/api/mobile/booking/create';
+  static const String ownerBookings = '/api/mobile/owner/bookings';
   
   // Negotiation endpoints
-  static const String negotiation = '/booking/negotiate';
-  static const String ownerNegotiation = '/owner/negotiate';
+  static const String negotiation = '/api/mobile/booking/negotiate';
+  static const String ownerNegotiation = '/api/mobile/owner/negotiate';
   
   // User endpoints
-  static const String userProfile = '/user/profile';
-  static const String favorites = '/user/favorites';
-  static const String notifications = '/user/notifications';
+  static const String userProfile = '/api/mobile/user/profile';
+  static const String favorites = '/api/mobile/user/favorites';
+  static const String notifications = '/api/mobile/user/notifications';
   
   // Payment endpoints
-  static const String checkout = '/payment/checkout';
-  static const String paymentMethods = '/payment/methods';
+  static const String checkout = '/api/mobile/payment/checkout';
+  static const String paymentMethods = '/api/mobile/payment/methods';
   
   // Review endpoints
   static const String reviews = '/api/mobile/turf/{id}/reviews';
