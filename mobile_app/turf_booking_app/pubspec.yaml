@@ -52,6 +52,9 @@ dependencies:
   
   # Loading animations
   flutter_spinkit: ^5.2.0
+  
+  # URL launcher for opening payment links in browser
+  url_launcher: ^6.1.12
 
 dev_dependencies:
   flutter_test:

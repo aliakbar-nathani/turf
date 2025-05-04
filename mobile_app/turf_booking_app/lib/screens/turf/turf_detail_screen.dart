@@ -12,6 +12,7 @@ import '../booking/create_booking_screen.dart';
 import '../auth/login_screen.dart';
 import 'reviews_screen.dart';
 import 'add_review_screen.dart';
+import '../main_screen.dart';
 
 class TurfDetailScreen extends StatefulWidget {
   final int turfId;
@@ -286,6 +287,36 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
               : _turf == null
                   ? const Center(child: Text('Turf not found'))
                   : _buildTurfDetails(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0, // Home tab
+        onTap: (index) {
+          if (index != 0) { // If not home tab
+            // Navigate to MainScreen with the selected tab
+            NavigationService.navigateToMain(context, initialIndex: index);
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppTheme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Bookings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
   

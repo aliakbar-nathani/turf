@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../models/turf_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/auth_service.dart';
+import '../main_screen.dart';
 
 class CreateBookingScreen extends StatefulWidget {
   final Turf turf;
@@ -289,6 +290,36 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Book Turf'),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0, // Home tab
+        onTap: (index) {
+          if (index != 0) { // If not home tab
+            // Navigate to MainScreen with the selected tab
+            NavigationService.navigateToMain(context, initialIndex: index);
+          }
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppTheme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: 'Bookings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
