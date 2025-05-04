@@ -152,7 +152,7 @@ def token_required(f):
 # API Routes for Mobile App Authentication
 @auth.route('/api/login', methods=['POST'])
 def api_login():
-    """API endpoint for mobile app login"""
+    """API endpoint for mobile app login - CSRF exempt"""
     data = request.get_json()
     if not data:
         return jsonify({

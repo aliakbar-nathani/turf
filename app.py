@@ -1,7 +1,7 @@
 import os
 import logging
 
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -38,6 +38,19 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Configure CSRF for the whole app except API routes
+from flask_wtf.csrf import CSRFProtect
+
+csrf = CSRFProtect()
+csrf.init_app(app)
+
+# Exempt API routes from CSRF protection
+@csrf.exempt
+def csrf_exempt_api():
+    if request.path.startswith('/auth/api/'):
+        return True
+    return False
 
 # Initialize database with app
 db.init_app(app)
