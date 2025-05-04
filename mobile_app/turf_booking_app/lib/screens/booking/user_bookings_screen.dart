@@ -483,35 +483,244 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
   Widget _buildBookingCard(Booking booking, String type) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16.0),
-      clipBehavior: Clip.antiAlias,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12.0),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with status
-          Container(
-            color: _getStatusColor(booking.status),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _getStatusText(booking.status),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+          // Turf image and status tag
+          Stack(
+            children: [
+              // Turf image
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+                child: SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: booking.turfImageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: booking.turfImageUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Center(
+                            child: SpinKitFadingCircle(
+                              color: AppTheme.primaryColor,
+                              size: 24.0,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.sports_soccer,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.sports_soccer,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        ),
+                ),
+              ),
+              
+              // Status tag
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(booking.status),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    _getStatusText(booking.status),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
+              ),
+            ],
+          ),
+          
+          // Booking details
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Turf name
                 Text(
-                  booking.formattedDate,
+                  booking.turfName,
                   style: const TextStyle(
-                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.0,
                   ),
+                ),
+                
+                const SizedBox(height: 8.0),
+                
+                // Booking date and time
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today,
+                      size: 16.0,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8.0),
+                    Text(
+                      booking.formattedDate,
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    const SizedBox(width: 16.0),
+                    Icon(
+                      Icons.access_time,
+                      size: 16.0,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 8.0),
+                    Text(
+                      booking.formattedTimeSlot,
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 8.0),
+                
+                // Price
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.payments_outlined,
+                          size: 16.0,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 8.0),
+                        RichText(
+                          text: TextSpan(
+                            style: DefaultTextStyle.of(context).style,
+                            children: [
+                              TextSpan(
+                                text: 'Price: ',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              TextSpan(
+                                text: '\$${booking.price.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Payment method tag
+                    if (booking.paymentMethod != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: booking.paymentMethod == 'pay_online' 
+                              ? Colors.blue.withOpacity(0.1) 
+                              : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: booking.paymentMethod == 'pay_online' 
+                                ? Colors.blue.withOpacity(0.3) 
+                                : Colors.orange.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          booking.paymentMethod == 'pay_online' 
+                              ? 'Online Payment' 
+                              : 'Pay on Arrival',
+                          style: TextStyle(
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.bold,
+                            color: booking.paymentMethod == 'pay_online' 
+                                ? Colors.blue 
+                                : Colors.orange,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                
+                // If there's a proposed price in negotiation
+                if (booking.status == 'negotiating' && booking.proposedPrice != null) ...[
+                  const SizedBox(height: 16.0),
+                  const Divider(),
+                  const SizedBox(height: 8.0),
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Your Proposed Price:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.secondaryColor,
+                        ),
+                      ),
+                      Text(
+                        '\$${booking.proposedPrice!.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.secondaryColor,
+                          fontSize: 16.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  const SizedBox(height: 4.0),
+                  
+                  if (booking.message != null && booking.message!.isNotEmpty)
+                    Text(
+                      'Your Message: "${booking.message}"',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey[600],
+                        fontSize: 12.0,
+                      ),
+                    ),
+                ],
+                
+                const SizedBox(height: 16.0),
+                
+                // Action buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: _buildActionButtons(booking, type),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
           
           // Booking details
           Padding(
