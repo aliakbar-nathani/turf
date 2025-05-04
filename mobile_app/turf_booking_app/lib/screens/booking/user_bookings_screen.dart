@@ -147,6 +147,74 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
     );
   }
   
+  void _showPaymentDialog(Booking booking) {
+    // Get the redirect URL for payment
+    String paymentUrl = '';
+    
+    // Construct payment URL (same format as in mobile_api.py)
+    String? domain = '';
+    try {
+      // This would be implemented properly in production
+      // For now, we're just constructing the URL as it would be in a real app
+      domain = 'turf-booking-app.replit.app';
+      paymentUrl = 'https://$domain/payment/checkout/${booking.id}';
+    } catch (e) {
+      print('Error constructing payment URL: $e');
+    }
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Complete Payment'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Booking #${booking.id} - ${booking.turfName}'),
+              const SizedBox(height: 8),
+              Text('Amount: \$${booking.price.toStringAsFixed(2)}'),
+              const SizedBox(height: 16),
+              const Text('Please click the button below to proceed to the payment page:'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // In a real app, we would launch the external browser with the payment URL
+                // or open a WebView component
+                
+                // Display the URL in a snackbar for demo purposes
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Payment URL: $paymentUrl'),
+                    duration: const Duration(seconds: 10),
+                    action: SnackBarAction(
+                      label: 'OK',
+                      onPressed: () {},
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+              ),
+              child: const Text('Proceed to Payment'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -438,12 +506,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     const SizedBox(width: 8.0),
                     ElevatedButton(
                       onPressed: () {
-                        // Navigate to payment screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment functionality coming soon'),
-                          ),
-                        );
+                        _showPaymentDialog(booking);
                       },
                       style: AppTheme.primaryButtonStyle,
                       child: const Text('Pay Now'),

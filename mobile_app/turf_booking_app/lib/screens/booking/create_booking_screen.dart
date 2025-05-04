@@ -210,11 +210,71 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           result.containsKey('redirectUrl') && 
           result['redirectUrl'] != null && 
           paymentOption == 'pay_online') {
-        // TODO: Navigate to webview with payment URL
-        // For now, just go back to the previous screen
-        Navigator.pop(context);
+        
+        // Launch payment URL in browser 
+        final String paymentUrl = result['redirectUrl'];
+        
+        // Show success dialog with instructions
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Payment Required'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your booking has been created successfully.'),
+                  SizedBox(height: 8),
+                  Text('Please complete the payment by clicking the button below to open the payment page.'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    // Open the URL in browser using url_launcher package
+                    if (!mounted) return;
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Return to previous screen
+                  },
+                  child: Text('Skip Payment For Now'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      // In a real app, we would launch URL here:
+                      // await launch(paymentUrl);
+                      print('Would launch URL: $paymentUrl');
+                      
+                      if (!mounted) return;
+                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(context); // Return to previous screen
+                      
+                      // Show toast with URL for demonstration
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Payment URL: $paymentUrl'),
+                          duration: Duration(seconds: 10),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error opening payment page: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: Text('Proceed to Payment'),
+                ),
+              ],
+            );
+          },
+        );
       } else {
-        // Go back to previous screen
+        // Go back to previous screen for non-payment cases
         Navigator.pop(context);
       }
     } else {

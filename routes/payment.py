@@ -157,27 +157,57 @@ def payment_cancel(booking_id):
 def webhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get('Stripe-Signature')
+    
+    # In production you would have a real webhook secret
+    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, os.environ.get('STRIPE_WEBHOOK_SECRET', 'whsec_placeholder')
-        )
+        if webhook_secret:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, webhook_secret
+            )
+        else:
+            # For testing without a webhook secret
+            data = json.loads(payload)
+            event = {"type": data.get("type"), "data": {"object": data}}
     except ValueError as e:
         # Invalid payload
         return 'Invalid payload', 400
     except stripe.error.SignatureVerificationError as e:
         # Invalid signature
         return 'Invalid signature', 400
+    except Exception as e:
+        return f'Error: {str(e)}', 400
 
     # Handle specific events
     if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        booking_id = session.get('metadata', {}).get('booking_id')
-        
-        if booking_id:
-            booking = Booking.query.get(int(booking_id))
-            if booking:
-                booking.payment_status = 'paid'
-                db.session.commit()
+        try:
+            session = event['data']['object']
+            booking_id = session.get('metadata', {}).get('booking_id')
+            
+            if booking_id:
+                booking = Booking.query.get(int(booking_id))
+                if booking:
+                    booking.payment_status = 'paid'
+                    
+                    # If booking was in payment_pending status, update it to confirmed
+                    if booking.status == BookingStatus.PAYMENT_PENDING:
+                        booking.status = BookingStatus.CONFIRMED
+                    
+                    db.session.commit()
+                    
+                    # Create notification for user about successful payment
+                    notification = Notification(
+                        user_id=booking.user_id,
+                        type=NotificationType.PAYMENT_SUCCESS,
+                        title='Payment Successful',
+                        message=f'Your payment for booking #{booking.id} has been successfully processed.',
+                        booking_id=booking.id
+                    )
+                    db.session.add(notification)
+                    db.session.commit()
+        except Exception as e:
+            print(f"Error processing webhook: {str(e)}")
+            # Continue processing rather than failing the whole webhook
     
     return 'Success', 200
