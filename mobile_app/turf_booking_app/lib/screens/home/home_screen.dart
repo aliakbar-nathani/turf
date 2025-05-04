@@ -46,14 +46,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     
     try {
-      // Get featured turfs
-      final featuredResult = await _turfService.getTurfs(featured: true);
+      // Get featured turfs - using basic getTurfs() for now
+      final featuredResult = await _turfService.getTurfs(limit: 5);
       
       // Get nearby turfs - in a real app, this would use location
-      final nearbyResult = await _turfService.getTurfs(city: 'Your City');
+      // Currently using advanced search with city filter
+      final nearbyResult = await _turfService.advancedSearch(city: 'New York');
       
       // Get popular turfs - in a real app, this would be sorted by ratings
-      final popularResult = await _turfService.getTurfs(sortBy: 'rating');
+      // Currently using a second call to getTurfs with different page
+      final popularResult = await _turfService.getTurfs(page: 2, limit: 5);
       
       if (!mounted) return;
       

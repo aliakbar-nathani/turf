@@ -128,7 +128,18 @@ class _SearchScreenState extends State<SearchScreen> {
         searchParams['has_shower'] = true;
       }
       
-      final result = await _turfService.searchTurfs(searchParams);
+      // Use the proper method with named parameters
+      final result = await _turfService.advancedSearch(
+        city: searchParams['city'],
+        date: searchParams['date'],
+        minPrice: searchParams['min_price'],
+        maxPrice: searchParams['max_price'],
+        indoor: searchParams['indoor']?.toString(),
+        hasParking: searchParams['has_parking'],
+        hasChangingRoom: searchParams['has_changing_room'],
+        hasShower: searchParams['has_shower'],
+        surfaceType: searchParams['surface_type'],
+      );
       
       if (!mounted) return;
       
