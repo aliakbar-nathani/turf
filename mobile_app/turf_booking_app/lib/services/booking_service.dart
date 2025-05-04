@@ -220,4 +220,58 @@ class BookingService {
 
     return headers;
   }
+  
+  Future<Map<String, dynamic>> respondToNegotiation({
+    required int bookingId,
+    required String action,
+    double? proposedPrice,
+    String? message,
+  }) async {
+    try {
+      if (authToken == null) {
+        return {
+          'success': false,
+          'message': 'Authentication required',
+        };
+      }
+
+      final Map<String, dynamic> responseData = {
+        'action': action,
+      };
+
+      if (proposedPrice != null) {
+        responseData['proposed_price'] = proposedPrice;
+      }
+
+      if (message != null && message.isNotEmpty) {
+        responseData['message'] = message;
+      }
+
+      final response = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/api/mobile/booking/$bookingId/negotiation'),
+        headers: _getHeaders(),
+        body: json.encode(responseData),
+      );
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': data['message'] ?? 'Negotiation response submitted successfully',
+          'booking': data['booking'] != null ? Booking.fromJson(data['booking']) : null,
+        };
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Failed to submit negotiation response',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+  }
 }

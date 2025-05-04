@@ -325,9 +325,29 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                 );
                 
                 try {
+                  // Show loading indicator
+                  final loadingSnackBar = SnackBar(
+                    content: Row(
+                      children: [
+                        SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text('Submitting your offer...'),
+                      ],
+                    ),
+                    duration: const Duration(seconds: 2),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+                  
                   // Make the API call to submit the negotiation
-                  final bookingService = BookingService();
-                  await bookingService.respondToNegotiation(
+                  final bookingService = BookingService(authToken: UserSessionManager().token);
+                  final result = await bookingService.respondToNegotiation(
                     bookingId: booking.id,
                     action: 'counter',
                     proposedPrice: proposedPrice,
@@ -341,12 +361,16 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                   await _loadBookings();
                   
                   // Show success message
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Your price proposal has been sent to the owner'),
-                      backgroundColor: AppTheme.successColor,
-                    ),
-                  );
+                  if (result['success']) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(result['message'] ?? 'Your price proposal has been sent to the owner'),
+                        backgroundColor: AppTheme.successColor,
+                      ),
+                    );
+                  } else {
+                    throw Exception(result['message'] ?? 'Failed to submit offer');
+                  }
                 } catch (e) {
                   // Show error message
                   ScaffoldMessenger.of(context).showSnackBar(

@@ -30,8 +30,8 @@ class ApiConfig {
   static const String ownerBookings = '/api/mobile/owner/bookings';
   
   // Negotiation endpoints
-  static const String negotiation = '/api/mobile/booking/negotiate';
-  static const String ownerNegotiation = '/api/mobile/owner/negotiate';
+  static const String negotiation = '/api/mobile/booking/{id}/negotiation';
+  static const String ownerNegotiation = '/api/mobile/owner/booking/{id}/negotiation';
   
   // User endpoints
   static const String userProfile = '/api/mobile/user/profile';
