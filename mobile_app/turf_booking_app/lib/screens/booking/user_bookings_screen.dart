@@ -118,8 +118,24 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Booking'),
-        content: const Text(
-          'Are you sure you want to cancel this booking? This action cannot be undone.',
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Booking #${booking.id} - ${booking.turfName}',
+                style: const TextStyle(fontSize: 14.0),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Are you sure you want to cancel this booking? This action cannot be undone.',
+                style: TextStyle(fontSize: 14.0),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -158,16 +174,32 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Complete Payment'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Booking #${booking.id} - ${booking.turfName}'),
-              const SizedBox(height: 8),
-              Text('Amount: \$${booking.price.toStringAsFixed(2)}'),
-              const SizedBox(height: 16),
-              const Text('Please click the button below to proceed to the payment page:'),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Booking #${booking.id} - ${booking.turfName}',
+                  style: const TextStyle(fontSize: 14.0),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Amount: \$${booking.price.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.0,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Please click the button below to proceed to the payment page:',
+                  style: TextStyle(fontSize: 14.0),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -307,14 +339,23 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Negotiate Price'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Booking #${booking.id} - ${booking.turfName}'),
-              const SizedBox(height: 8),
-              Text('Current Price: \$${booking.price.toStringAsFixed(2)}'),
-              const SizedBox(height: 16),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Booking #${booking.id} - ${booking.turfName}',
+                  style: const TextStyle(fontSize: 14.0),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Current Price: \$${booking.price.toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
               
               // Price input field
               TextField(
@@ -822,15 +863,20 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.errorColor,
             side: BorderSide(color: AppTheme.errorColor),
+            // Smaller padding to prevent overflow
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           ),
-          child: const Text('Cancel'),
+          child: const Text(
+            'Cancel',
+            style: TextStyle(fontSize: 12.0),
+          ),
         ),
       );
     }
     
-    // Add spacing between buttons
+    // Add spacing between buttons - using smaller spacing
     if (actions.isNotEmpty) {
-      actions.add(const SizedBox(width: 8.0));
+      actions.add(const SizedBox(width: 6.0));
     }
     
     // Payment button for pending payment
@@ -841,8 +887,13 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.primaryColor,
             foregroundColor: Colors.white,
+            // Smaller padding to prevent overflow
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           ),
-          child: const Text('Pay Now'),
+          child: const Text(
+            'Pay Now',
+            style: TextStyle(fontSize: 12.0),
+          ),
         ),
       );
     }
@@ -862,8 +913,13 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.secondaryColor,
             foregroundColor: Colors.white,
+            // Smaller padding to prevent overflow
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           ),
-          child: const Text('View Details'),
+          child: const Text(
+            'View Details',
+            style: TextStyle(fontSize: 12.0),
+          ),
         ),
       );
     }
@@ -876,8 +932,13 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.secondaryColor,
             foregroundColor: Colors.white,
+            // Smaller padding to prevent overflow
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
           ),
-          child: const Text('Counter Offer'),
+          child: const Text(
+            'Counter Offer',
+            style: TextStyle(fontSize: 12.0),
+          ),
         ),
       );
     }
