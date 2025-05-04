@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/api_config.dart';
 import '../../models/booking_model.dart';
@@ -190,32 +191,26 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                 Navigator.pop(context);
                 
                 try {
-                  // Try to launch the URL in the external browser
-                  // Note: In a real app, we'd use a proper URL launcher
-                  // For example with url_launcher package:
-                  // await launch(paymentUrl);
+                  // Convert string to Uri
+                  final Uri url = Uri.parse(paymentUrl);
+
+                  // Launch the URL in external browser
+                  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                    throw Exception('Could not launch $url');
+                  }
                   
-                  // Simulating successful launch with a snackbar
+                  // Show success message
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Opening payment page in browser...'),
-                      duration: const Duration(seconds: 3),
-                      backgroundColor: AppTheme.successColor,
+                    const SnackBar(
+                      content: Text('Payment page opened in browser. Once payment is complete, your booking will be automatically confirmed.'),
+                      duration: Duration(seconds: 5),
+                      backgroundColor: Colors.green,
                     ),
                   );
                   
-                  // Show payment URL for demo purposes
-                  Future.delayed(const Duration(seconds: 3), () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Payment URL: $paymentUrl'),
-                        duration: const Duration(seconds: 10),
-                        action: SnackBarAction(
-                          label: 'OK',
-                          onPressed: () {},
-                        ),
-                      ),
-                    );
+                  // Refresh bookings after a delay to reflect the updated payment status
+                  Future.delayed(const Duration(seconds: 5), () {
+                    _loadBookings();
                   });
                 } catch (e) {
                   // Show error if URL launch fails

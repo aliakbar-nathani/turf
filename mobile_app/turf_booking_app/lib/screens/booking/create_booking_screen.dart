@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../models/turf_model.dart';
 import '../../services/booking_service.dart';
@@ -244,28 +245,33 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     try {
-                      // In a real app, we would launch URL here:
-                      // await launch(paymentUrl);
-                      print('Would launch URL: $paymentUrl');
+                      final Uri url = Uri.parse(paymentUrl);
+                      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                        throw Exception('Could not launch $url');
+                      }
                       
                       if (!mounted) return;
                       Navigator.pop(context); // Close dialog
-                      Navigator.pop(context); // Return to previous screen
                       
-                      // Show toast with URL for demonstration
+                      // Navigate to the bookings tab to see the booking
+                      NavigationService.navigateToMain(context, initialIndex: 1);
+                      
+                      // Show confirmation for better UX
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Payment URL: $paymentUrl'),
-                          duration: Duration(seconds: 10),
+                        const SnackBar(
+                          content: Text('Payment page opened in browser. After payment, your booking will be confirmed automatically.'),
+                          duration: Duration(seconds: 5),
                         ),
                       );
                     } catch (e) {
+                      if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Error opening payment page: $e'),
-                          backgroundColor: Colors.red,
+                          backgroundColor: AppTheme.errorColor,
                         ),
                       );
+                      Navigator.pop(context); // Close dialog
                     }
                   },
                   child: Text('Proceed to Payment'),

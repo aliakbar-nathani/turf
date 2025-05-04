@@ -2,8 +2,8 @@ class AppConstants {
   static const String appName = 'Turf Booking';
   static const String appVersion = '1.0.0';
   
-  // API Base URL
-  static const String apiBaseUrl = 'http://localhost:5000/api';
+  // API Base URL - dynamically set via API Config
+  static const String apiBaseUrl = 'https://your-replit-app.replit.app/api/mobile';
   
   // Authentication
   static const String tokenKey = 'auth_token';
