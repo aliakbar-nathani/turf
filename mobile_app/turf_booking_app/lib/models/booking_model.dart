@@ -40,21 +40,21 @@ class Booking {
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'],
-      userId: json['user_id'],
+      userId: json['user_id'] ?? 0, // Add null safety
       turfId: json['turf_id'],
-      turfName: json['turf_name'],
+      turfName: json['turf_name'] ?? '',
       turfImageUrl: json['turf_image_url'] ?? '',
-      bookingDate: json['booking_date'],
-      startTime: json['start_time'],
-      endTime: json['end_time'],
-      price: json['price'].toDouble(),
-      status: json['status'],
+      bookingDate: json['booking_date'] ?? '',
+      startTime: json['start_time'] ?? '',
+      endTime: json['end_time'] ?? '',
+      price: json['price'] != null ? (json['price'] is int ? json['price'].toDouble() : json['price']) : 0.0,
+      status: json['status'] ?? '',
       paymentMethod: json['payment_method'],
       isPaid: json['is_paid'] ?? false,
       isNegotiable: json['is_negotiable'] ?? false,
-      proposedPrice: json['proposed_price']?.toDouble(),
+      proposedPrice: json['proposed_price'] != null ? (json['proposed_price'] is int ? json['proposed_price'].toDouble() : json['proposed_price']) : null,
       message: json['message'],
-      createdAt: json['created_at'],
+      createdAt: json['created_at'] ?? '',
       ownerResponse: json['owner_response'],
     );
   }
