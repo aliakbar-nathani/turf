@@ -8,6 +8,7 @@ import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_session_manager.dart';
+import '../../services/payment_service.dart';
 import '../auth/login_screen.dart';
 
 class UserBookingsScreen extends StatefulWidget {
@@ -151,17 +152,6 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
   }
   
   void _showPaymentDialog(Booking booking) {
-    // Get the redirect URL for payment
-    String paymentUrl = '';
-    
-    // Construct payment URL using the API base URL
-    try {
-      // Use the same base URL as the rest of the API
-      paymentUrl = '${ApiConfig.baseUrl}/payment/checkout/${booking.id}';
-    } catch (e) {
-      print('Error constructing payment URL: $e');
-    }
-    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -188,15 +178,53 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
             ),
             ElevatedButton(
               onPressed: () async {
+                // Show loading indicator while payment session is being created
                 Navigator.pop(context);
                 
+                // Show loading indicator
+                final loadingSnackBar = SnackBar(
+                  content: Row(
+                    children: [
+                      SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text('Preparing payment...'),
+                    ],
+                  ),
+                  duration: const Duration(seconds: 3),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
+                
                 try {
-                  // Convert string to Uri
-                  final Uri url = Uri.parse(paymentUrl);
-
-                  // Launch the URL in external browser
-                  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-                    throw Exception('Could not launch $url');
+                  // Get token and create payment service
+                  final token = await _authService.getToken();
+                  if (token == null) {
+                    throw Exception('Authentication required');
+                  }
+                  
+                  final paymentService = PaymentService(authToken: token);
+                  
+                  // Create checkout session
+                  final result = await paymentService.createCheckoutSession(booking.id);
+                  
+                  if (!result['success']) {
+                    throw Exception(result['message']);
+                  }
+                  
+                  // Launch payment in browser
+                  final paymentUrl = result['checkout_url'];
+                  final sessionId = result['session_id'];
+                  
+                  final launched = await paymentService.launchPayment(paymentUrl);
+                  
+                  if (!launched) {
+                    throw Exception('Could not launch payment page');
                   }
                   
                   // Show success message
@@ -208,15 +236,49 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     ),
                   );
                   
-                  // Refresh bookings after a delay to reflect the updated payment status
-                  Future.delayed(const Duration(seconds: 5), () {
-                    _loadBookings();
-                  });
+                  // Poll for payment status updates
+                  bool isPaid = false;
+                  int retryCount = 0;
+                  const maxRetries = 5;
+                  
+                  while (!isPaid && retryCount < maxRetries) {
+                    await Future.delayed(const Duration(seconds: 3));
+                    
+                    // Check payment status
+                    final statusResult = await paymentService.checkPaymentStatus(
+                      booking.id, 
+                      sessionId,
+                    );
+                    
+                    if (statusResult['success'] && statusResult['is_paid']) {
+                      isPaid = true;
+                      
+                      // Show confirmation and refresh bookings
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Payment successful! Your booking has been confirmed.'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      
+                      _loadBookings();
+                      break;
+                    }
+                    
+                    retryCount++;
+                  }
+                  
+                  // Final refresh after a few seconds in case the webhook hasn't processed yet
+                  if (!isPaid) {
+                    Future.delayed(const Duration(seconds: 5), () {
+                      _loadBookings();
+                    });
+                  }
                 } catch (e) {
-                  // Show error if URL launch fails
+                  // Show error if payment initiation fails
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Could not open payment page: $e'),
+                      content: Text('Payment error: $e'),
                       backgroundColor: AppTheme.errorColor,
                     ),
                   );

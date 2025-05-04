@@ -285,6 +285,91 @@ def mobile_payment_cancel(booking_id):
         title='Payment Cancelled'
     )
 
+@payment.route('/mobile-status/<int:booking_id>', methods=['GET'])
+def mobile_payment_status(booking_id):
+    """
+    API endpoint to check the payment status of a booking
+    Used by the mobile app to verify if payment has been completed
+    """
+    # Extract session_id from query parameters
+    session_id = request.args.get('session_id')
+    
+    if not session_id:
+        return json.dumps({
+            'success': False,
+            'message': 'Missing session_id parameter'
+        }), 400, {'Content-Type': 'application/json'}
+    
+    # Validate the booking belongs to the correct user
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return json.dumps({
+            'success': False,
+            'message': 'Authorization required'
+        }), 401, {'Content-Type': 'application/json'}
+
+    token = auth_header.split(' ')[1]
+    try:
+        import jwt
+        from datetime import datetime, timezone
+        
+        secret_key = os.environ.get('JWT_SECRET_KEY', 'fallback_secret_for_dev')
+        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+        
+        # Check token expiration
+        if datetime.now(timezone.utc).timestamp() > payload.get('exp', 0):
+            return json.dumps({
+                'success': False,
+                'message': 'Token expired'
+            }), 401, {'Content-Type': 'application/json'}
+            
+        user_id = payload.get('user_id')
+        
+        booking = Booking.query.get_or_404(booking_id)
+        if booking.user_id != user_id:
+            return json.dumps({
+                'success': False,
+                'message': 'Unauthorized access to this booking'
+            }), 403, {'Content-Type': 'application/json'}
+    
+    except Exception as e:
+        return json.dumps({
+            'success': False,
+            'message': f'Authorization failed: {str(e)}'
+        }), 401, {'Content-Type': 'application/json'}
+    
+    # Check if the session_id matches the booking's payment_id
+    if booking.payment_id != session_id:
+        return json.dumps({
+            'success': False,
+            'message': 'Invalid session ID for this booking'
+        }), 400, {'Content-Type': 'application/json'}
+    
+    # Get payment status from Stripe
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        is_paid = session.payment_status == 'paid'
+        
+        # If the payment is completed but not reflected in our database, update it
+        if is_paid and booking.payment_status != 'paid':
+            booking.payment_status = 'paid'
+            if booking.status == BookingStatus.PAYMENT_PENDING:
+                booking.status = BookingStatus.CONFIRMED
+            db.session.commit()
+            
+        return json.dumps({
+            'success': True,
+            'is_paid': is_paid,
+            'booking_status': booking.status,
+            'message': 'Payment completed successfully' if is_paid else 'Payment pending'
+        }), 200, {'Content-Type': 'application/json'}
+        
+    except Exception as e:
+        return json.dumps({
+            'success': False,
+            'message': f'Error checking payment status: {str(e)}'
+        }), 500, {'Content-Type': 'application/json'}
+
 @payment.route('/webhook', methods=['POST'])
 def webhook():
     payload = request.get_data(as_text=True)
