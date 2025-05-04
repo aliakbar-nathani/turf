@@ -1,15 +1,23 @@
 class AppConstants {
+  static const String appName = 'Turf Booking';
+  static const String appVersion = '1.0.0';
+  
   // API Base URL
   static const String apiBaseUrl = 'http://localhost:5000/api';
   
   // Authentication
-  static const String authTokenKey = 'auth_token';
+  static const String tokenKey = 'auth_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userIdKey = 'user_id';
   static const String userNameKey = 'user_name';
-  static const String userEmailKey = 'user_email';
+  static const String emailKey = 'email';
   static const String userRoleKey = 'user_role';
   static const String userPhoneKey = 'user_phone';
+  
+  // User roles
+  static const String roleUser = 'USER';
+  static const String roleOwner = 'OWNER';
+  static const String roleAdmin = 'ADMIN';
   
   // API Endpoints
   static const String loginEndpoint = '/auth/login';

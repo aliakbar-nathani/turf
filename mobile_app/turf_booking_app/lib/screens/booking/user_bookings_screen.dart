@@ -945,7 +945,7 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                     ),
                     child: const Text('Accept'),
                   ),
-                ] else [
+                ] else ...[
                   ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(context);
