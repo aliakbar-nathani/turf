@@ -5,15 +5,20 @@ import os
 from werkzeug.security import check_password_hash
 from functools import wraps
 
-from models import User, UserRole, Turf, Review, TimeSlot, Booking, BookingStatus
+from models import User, UserRole, Turf, Review, TimeSlot, Booking, BookingStatus, TurfImage
 from app import db
 
 # Create a blueprint for all mobile API routes
 mobile_api = Blueprint('mobile_api', __name__)
 
-# JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'turf-booking-jwt-secret')
+# JWT Configuration - Always use the same secret in development for testing
+JWT_SECRET = 'turf-booking-jwt-secret-for-mobile-app'
 JWT_EXPIRATION = datetime.timedelta(days=7)
+
+# In production, use this:
+# JWT_SECRET = os.environ.get('JWT_SECRET')
+# if not JWT_SECRET:
+#     raise RuntimeError("JWT_SECRET environment variable not set")
 
 # Authentication helper functions
 def generate_token(user_id):
@@ -226,7 +231,8 @@ def get_turf_reviews(turf_id):
         'success': True,
         'turf_name': turf.name,
         'reviews': reviews_data,
-        'avg_rating': turf.avg_rating
+        'avg_rating': turf.get_average_rating(),
+        'review_count': turf.get_rating_count()
     })
 
 @mobile_api.route('/turf/<int:turf_id>/can_review', methods=['GET'])
@@ -309,11 +315,9 @@ def submit_review(current_user, turf_id):
         
         db.session.add(review)
         
-        # Update turf's average rating
+        # No need to manually update average rating
+        # It's calculated on-the-fly by the get_average_rating() method
         turf = Turf.query.get(turf_id)
-        all_reviews = Review.query.filter_by(turf_id=turf_id).all()
-        total_rating = sum([r.rating for r in all_reviews]) + rating
-        turf.avg_rating = total_rating / (len(all_reviews) + 1)
         
         db.session.commit()
         
@@ -343,6 +347,12 @@ def get_user_reviews(current_user):
     reviews_data = []
     for review in reviews:
         turf = Turf.query.get(review.turf_id)
+        # Get first image URL if available
+        image_url = None
+        turf_image = TurfImage.query.filter_by(turf_id=turf.id).first()
+        if turf_image:
+            image_url = turf_image.image_url
+            
         reviews_data.append({
             'id': review.id,
             'rating': review.rating,
@@ -351,7 +361,7 @@ def get_user_reviews(current_user):
             'turf': {
                 'id': turf.id,
                 'name': turf.name,
-                'image_url': turf.image_url
+                'image_url': image_url
             },
             'owner_response': review.owner_response
         })

@@ -2,7 +2,7 @@ modules = ["python-3.11", "postgresql-16"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["flutter", "openssl", "postgresql"]
+packages = ["flutter", "openssl", "postgresql", "jq"]
 
 [deployment]
 deploymentTarget = "autoscale"
