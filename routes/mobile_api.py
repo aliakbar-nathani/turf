@@ -26,7 +26,7 @@ def generate_token(user_id):
     payload = {
         'exp': datetime.datetime.utcnow() + JWT_EXPIRATION,
         'iat': datetime.datetime.utcnow(),
-        'sub': user_id
+        'sub': str(user_id)  # Convert to string to avoid JWT validation issues
     }
     return jwt.encode(
         payload,
@@ -54,12 +54,14 @@ def token_required(f):
         
         try:
             payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-            user = User.query.get(payload['sub'])
+            # Convert string user_id back to integer
+            user_id = int(payload['sub'])
+            user = User.query.get(user_id)
             
             if not user:
                 return jsonify({
                     'success': False,
-                    'message': 'Invalid token'
+                    'message': 'User not found'
                 }), 401
                 
         except jwt.ExpiredSignatureError:
@@ -67,10 +69,15 @@ def token_required(f):
                 'success': False,
                 'message': 'Token has expired'
             }), 401
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
             return jsonify({
                 'success': False,
-                'message': 'Invalid token'
+                'message': f'Invalid token: {str(e)}'
+            }), 401
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': f'Token error: {str(e)}'
             }), 401
         
         return f(user, *args, **kwargs)
