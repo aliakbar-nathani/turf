@@ -356,18 +356,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
   
   Widget _buildTurfGrid(List<Turf> turfs) {
+    // Limit the number of turfs to show to avoid rendering issues
+    final limitedTurfs = turfs.length > 4 ? turfs.sublist(0, 4) : turfs;
+    
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.8,
+        childAspectRatio: 0.7,
         crossAxisSpacing: 16.0,
         mainAxisSpacing: 16.0,
       ),
-      itemCount: turfs.length,
+      itemCount: limitedTurfs.length,
       itemBuilder: (context, index) {
-        final turf = turfs[index];
+        final turf = limitedTurfs[index];
         return GestureDetector(
           onTap: () => _navigateToTurfDetails(turf.id),
           child: Container(

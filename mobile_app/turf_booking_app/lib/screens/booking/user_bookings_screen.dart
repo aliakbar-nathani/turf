@@ -721,279 +721,120 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
         ],
       ),
     );
-          
-          // Booking details
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Turf image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: SizedBox(
-                    width: 80,
-                    height: 80,
-                    child: booking.turfImageUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: booking.turfImageUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Center(
-                              child: SpinKitFadingCircle(
-                                color: AppTheme.primaryColor,
-                                size: 24.0,
-                              ),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.sports_soccer,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.grey[300],
-                            child: const Icon(
-                              Icons.sports_soccer,
-                              size: 40,
-                              color: Colors.grey,
-                            ),
-                          ),
-                  ),
-                ),
-                
-                const SizedBox(width: 16.0),
-                
-                // Booking info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        booking.turfName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.0,
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 4.0),
-                      
-                      // Time
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.access_time,
-                            size: 16,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            booking.timeRange,
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 4.0),
-                      
-                      // Price
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.payment,
-                            size: 16,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '\$${booking.price.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (booking.isNegotiable && booking.proposedPrice != null) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '(Proposed: \$${booking.proposedPrice!.toStringAsFixed(2)})',
-                              style: TextStyle(
-                                color: AppTheme.accentColor,
-                                fontSize: 12.0,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 4.0),
-                      
-                      // Payment status
-                      Row(
-                        children: [
-                          Icon(
-                            booking.isPaid ? Icons.check_circle : Icons.money_off,
-                            size: 16,
-                            color: booking.isPaid ? AppTheme.successColor : Colors.grey,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            booking.isPaid ? 'Paid' : 'Payment pending',
-                            style: TextStyle(
-                              color: booking.isPaid ? AppTheme.successColor : Colors.grey[600],
-                            ),
-                          ),
-                          if (booking.paymentMethod != null) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              '(${_formatPaymentMethod(booking.paymentMethod!)})',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 12.0,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+  }
+  
+  List<Widget> _buildActionButtons(Booking booking, String type) {
+    final List<Widget> actions = [];
+    
+    // Cancel button for upcoming and pending bookings
+    if ((type == 'upcoming' || type == 'pending') && 
+        !booking.isCompleted && 
+        booking.status != 'cancelled') {
+      actions.add(
+        OutlinedButton(
+          onPressed: () => _showCancelConfirmationDialog(booking),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.errorColor,
+            side: BorderSide(color: AppTheme.errorColor),
           ),
-          
-          // Action buttons
-          if (booking.canCancel || booking.canPay || booking.canNegotiate || booking.userCanRespond)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (booking.canCancel)
-                    OutlinedButton(
-                      onPressed: () => _showCancelConfirmationDialog(booking),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.errorColor,
-                        side: BorderSide(color: AppTheme.errorColor),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  
-                  if (booking.canPay) ...[
-                    const SizedBox(width: 8.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        _showPaymentDialog(booking);
-                      },
-                      style: AppTheme.primaryButtonStyle,
-                      child: const Text('Pay Now'),
-                    ),
-                  ],
-                  
-                  if (booking.userCanRespond) ...[
-                    const SizedBox(width: 8.0),
-                    ElevatedButton(
-                      onPressed: () async {
-                        // Show dialog to accept, reject, or counter offer
-                        await _showRespondToNegotiationDialog(booking);
-                      },
-                      style: AppTheme.secondaryButtonStyle,
-                      child: const Text('Respond to Offer'),
-                    ),
-                  ] else if (booking.canNegotiate) ...[
-                    const SizedBox(width: 8.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        _showNegotiationDialog(booking);
-                      },
-                      style: AppTheme.secondaryButtonStyle,
-                      child: const Text('Negotiate'),
-                    ),
-                  ],
-                ],
+          child: const Text('Cancel'),
+        ),
+      );
+    }
+    
+    // Add spacing between buttons
+    if (actions.isNotEmpty) {
+      actions.add(const SizedBox(width: 8.0));
+    }
+    
+    // Payment button for pending payment
+    if (booking.status == 'payment_pending' && booking.paymentMethod == 'pay_online') {
+      actions.add(
+        ElevatedButton(
+          onPressed: () => _showPaymentDialog(booking),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Pay Now'),
+        ),
+      );
+    }
+    
+    // View button for all bookings
+    if (actions.isEmpty || type == 'past') {
+      actions.add(
+        ElevatedButton(
+          onPressed: () {
+            // View booking details
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('View booking details functionality coming soon'),
               ),
-            ),
-          
-          // Owner response for negotiation
-          if (booking.status == 'negotiating' && booking.ownerResponse != null)
-            Container(
-              padding: const EdgeInsets.all(12.0),
-              color: Colors.grey[100],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Owner Response:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14.0,
-                    ),
-                  ),
-                  const SizedBox(height: 4.0),
-                  Text(
-                    booking.ownerResponse!,
-                    style: TextStyle(
-                      color: Colors.grey[800],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.secondaryColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('View Details'),
+        ),
+      );
+    }
+    
+    // Counter offer button for negotiating bookings
+    if (booking.status == 'negotiating') {
+      actions.add(
+        ElevatedButton(
+          onPressed: () => _showNegotiationDialog(booking),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.secondaryColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Counter Offer'),
+        ),
+      );
+    }
+    
+    return actions;
   }
   
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'confirmed':
-        return AppTheme.successColor;
       case 'pending':
         return Colors.orange;
       case 'negotiating':
-        return AppTheme.secondaryColor;
+        return Colors.blue;
       case 'payment_pending':
         return Colors.purple;
+      case 'confirmed':
+        return Colors.green;
       case 'completed':
         return Colors.teal;
       case 'cancelled':
-        return Colors.grey;
+        return Colors.red;
       default:
-        return AppTheme.primaryColor;
+        return Colors.grey;
     }
   }
   
   String _getStatusText(String status) {
     switch (status) {
-      case 'confirmed':
-        return 'Confirmed';
       case 'pending':
         return 'Pending Approval';
       case 'negotiating':
         return 'Price Negotiation';
       case 'payment_pending':
         return 'Payment Pending';
+      case 'confirmed':
+        return 'Confirmed';
       case 'completed':
         return 'Completed';
       case 'cancelled':
         return 'Cancelled';
       default:
-        return status.toUpperCase();
+        return 'Unknown';
     }
-  }
-  
-  String _formatPaymentMethod(String method) {
-    if (method == 'pay_online') {
-      return 'Online Payment';
-    } else if (method == 'pay_on_arrival') {
-      return 'Pay on Arrival';
-    }
-    return method;
   }
   
   IconData _getEmptyIcon(String type) {
@@ -1019,239 +860,6 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
         return 'You have no past bookings.\nCompleted or cancelled bookings will appear here.';
       default:
         return 'No bookings found.';
-    }
-  }
-  
-  Future<void> _showRespondToNegotiationDialog(Booking booking) async {
-    final proposedPriceController = TextEditingController(
-      text: booking.proposedPrice?.toString() ?? booking.price.toString()
-    );
-    final messageController = TextEditingController();
-    
-    // Whether the user is making a counter offer or not
-    bool isCounterOffer = false;
-    
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Respond to Negotiation'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Booking #${booking.id} - ${booking.turfName}'),
-                  const SizedBox(height: 8),
-                  Text('Current Offer: \$${booking.proposedPrice?.toStringAsFixed(2) ?? booking.price.toStringAsFixed(2)}'),
-                  const SizedBox(height: 16),
-                  
-                  // Radio buttons for action selection
-                  Row(
-                    children: [
-                      Radio<bool>(
-                        value: false,
-                        groupValue: isCounterOffer,
-                        onChanged: (value) {
-                          setState(() {
-                            isCounterOffer = value!;
-                          });
-                        },
-                      ),
-                      const Text('Accept or Reject Offer'),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Radio<bool>(
-                        value: true,
-                        groupValue: isCounterOffer,
-                        onChanged: (value) {
-                          setState(() {
-                            isCounterOffer = value!;
-                          });
-                        },
-                      ),
-                      const Text('Make Counter Offer'),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  if (isCounterOffer) ...[
-                    // Price input field
-                    TextField(
-                      controller: proposedPriceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Your Counter Price (\$)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        // In a real app, we'd use a proper numeric formatter
-                        // FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                      ],
-                    ),
-                    
-                    const SizedBox(height: 12),
-                  ],
-                  
-                  // Message input field
-                  TextField(
-                    controller: messageController,
-                    decoration: const InputDecoration(
-                      labelText: 'Message (Optional)',
-                      border: OutlineInputBorder(),
-                      hintText: 'Add any additional details...',
-                    ),
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Cancel'),
-                ),
-                if (!isCounterOffer) ...[
-                  OutlinedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await _submitNegotiationResponse(
-                        booking,
-                        'reject',
-                        null,
-                        messageController.text.trim(),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.errorColor,
-                      side: BorderSide(color: AppTheme.errorColor),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      await _submitNegotiationResponse(
-                        booking,
-                        'accept',
-                        null,
-                        messageController.text.trim(),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.successColor,
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ] else ...[
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      
-                      // Validate input
-                      double? proposedPrice;
-                      try {
-                        proposedPrice = double.parse(proposedPriceController.text);
-                        if (proposedPrice <= 0) {
-                          throw Exception('Invalid price');
-                        }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please enter a valid price'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-                      
-                      await _submitNegotiationResponse(
-                        booking,
-                        'counter',
-                        proposedPrice,
-                        messageController.text.trim(),
-                      );
-                    },
-                    style: AppTheme.secondaryButtonStyle,
-                    child: const Text('Submit Counter Offer'),
-                  ),
-                ],
-              ],
-            );
-          }
-        );
-      },
-    );
-  }
-  
-  Future<void> _submitNegotiationResponse(
-    Booking booking,
-    String action,
-    double? proposedPrice,
-    String? message,
-  ) async {
-    // Show loading indicator
-    final loadingSnackBar = SnackBar(
-      content: Row(
-        children: [
-          SizedBox(
-            height: 20,
-            width: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text('Processing your response...'),
-        ],
-      ),
-      duration: const Duration(seconds: 2),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(loadingSnackBar);
-    
-    try {
-      // Make the API call to submit the negotiation response
-      final token = await _authService.getToken();
-      final bookingService = BookingService(authToken: token);
-      final result = await bookingService.respondToNegotiation(
-        bookingId: booking.id,
-        action: action,
-        proposedPrice: proposedPrice,
-        message: message,
-      );
-      
-      // Add a small delay for better UX
-      await Future.delayed(const Duration(milliseconds: 200));
-      
-      // Refresh the bookings list
-      await _loadBookings();
-      
-      // Show success or error message
-      if (result['success']) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message'] ?? 'Response submitted successfully'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
-      } else {
-        throw Exception(result['message'] ?? 'Failed to submit response');
-      }
-    } catch (e) {
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: AppTheme.errorColor,
-        ),
-      );
     }
   }
 }
