@@ -118,24 +118,22 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Booking'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Booking #${booking.id} - ${booking.turfName}',
-                style: const TextStyle(fontSize: 14.0),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Are you sure you want to cancel this booking? This action cannot be undone.',
-                style: TextStyle(fontSize: 14.0),
-              ),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Booking #${booking.id} - ${booking.turfName}',
+              style: const TextStyle(fontSize: 14.0),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Are you sure you want to cancel this booking? This action cannot be undone.',
+              style: TextStyle(fontSize: 14.0),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -174,32 +172,30 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Complete Payment'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Booking #${booking.id} - ${booking.turfName}',
-                  style: const TextStyle(fontSize: 14.0),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Booking #${booking.id} - ${booking.turfName}',
+                style: const TextStyle(fontSize: 14.0),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Amount: \$${booking.price.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16.0,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Amount: \$${booking.price.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.0,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Please click the button below to proceed to the payment page:',
-                  style: TextStyle(fontSize: 14.0),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Please click the button below to proceed to the payment page:',
+                style: TextStyle(fontSize: 14.0),
+              ),
+            ],
           ),
           actions: [
             TextButton(
@@ -356,34 +352,35 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> with SingleTick
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-              
-              // Price input field
-              TextField(
-                controller: proposedPriceController,
-                decoration: const InputDecoration(
-                  labelText: 'Your Proposed Price (\$)',
-                  border: OutlineInputBorder(),
+                
+                // Price input field
+                TextField(
+                  controller: proposedPriceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Your Proposed Price (\$)',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    // In a real app, we'd use a proper numeric formatter
+                    // FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                  ],
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  // In a real app, we'd use a proper numeric formatter
-                  // FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Message input field
-              TextField(
-                controller: messageController,
-                decoration: const InputDecoration(
-                  labelText: 'Message to Owner (Optional)',
-                  border: OutlineInputBorder(),
-                  hintText: 'Explain why you are proposing this price...',
+                
+                const SizedBox(height: 12),
+                
+                // Message input field
+                TextField(
+                  controller: messageController,
+                  decoration: const InputDecoration(
+                    labelText: 'Message to Owner (Optional)',
+                    border: OutlineInputBorder(),
+                    hintText: 'Explain why you are proposing this price...',
+                  ),
+                  maxLines: 3,
                 ),
-                maxLines: 3,
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
