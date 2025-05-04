@@ -1,49 +1,43 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
-import '../models/user_model.dart';
-import '../models/booking_model.dart';
 
 class UserService {
   final String? authToken;
-
+  
   UserService({this.authToken});
-
+  
   Future<Map<String, dynamic>> getUserProfile() async {
     try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.userProfile}'),
-        headers: _getHeaders(),
+        Uri.parse('${ApiConfig.baseUrl}/user/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
       );
-
+      
       final responseData = json.decode(response.body);
-
+      
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'user': User.fromJson(responseData['user']),
+          'userData': responseData['data'] ?? responseData,
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to fetch user profile',
+          'message': responseData['message'] ?? 'Failed to load profile',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error: $e',
+        'message': 'An error occurred: $e',
       };
     }
   }
-
+  
   Future<Map<String, dynamic>> updateUserProfile({
     required String username,
     required String phoneNumber,
@@ -51,37 +45,32 @@ class UserService {
     String? newPassword,
   }) async {
     try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final Map<String, dynamic> userData = {
+      final Map<String, dynamic> requestBody = {
         'username': username,
         'phone_number': phoneNumber,
       };
-
-      if (currentPassword != null && currentPassword.isNotEmpty &&
-          newPassword != null && newPassword.isNotEmpty) {
-        userData['current_password'] = currentPassword;
-        userData['new_password'] = newPassword;
+      
+      if (currentPassword != null && newPassword != null) {
+        requestBody['current_password'] = currentPassword;
+        requestBody['new_password'] = newPassword;
       }
-
-      final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.userProfile}/update'),
-        headers: _getHeaders(),
-        body: json.encode(userData),
+      
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/user/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode(requestBody),
       );
-
+      
       final responseData = json.decode(response.body);
-
+      
       if (response.statusCode == 200) {
         return {
           'success': true,
+          'userData': responseData['data'] ?? responseData,
           'message': responseData['message'] ?? 'Profile updated successfully',
-          'user': User.fromJson(responseData['user']),
         };
       } else {
         return {
@@ -92,94 +81,102 @@ class UserService {
     } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error: $e',
+        'message': 'An error occurred: $e',
       };
     }
   }
-
-  Future<Map<String, dynamic>> getUserBookings() async {
+  
+  Future<Map<String, dynamic>> getNotificationSettings() async {
     try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.bookings}'),
-        headers: _getHeaders(),
+        Uri.parse('${ApiConfig.baseUrl}/user/notification-settings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
       );
-
+      
       final responseData = json.decode(response.body);
-
+      
       if (response.statusCode == 200) {
-        final List<Booking> bookings = (responseData['bookings'] as List)
-            .map((bookingJson) => Booking.fromJson(bookingJson))
-            .toList();
-
         return {
           'success': true,
-          'bookings': bookings,
+          'settings': responseData['data'] ?? responseData,
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to fetch bookings',
+          'message': responseData['message'] ?? 'Failed to load notification settings',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error: $e',
+        'message': 'An error occurred: $e',
       };
     }
   }
-
+  
+  Future<Map<String, dynamic>> updateNotificationSettings(Map<String, bool> settings) async {
+    try {
+      final response = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/user/notification-settings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: json.encode(settings),
+      );
+      
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': responseData['message'] ?? 'Notification settings updated successfully',
+        };
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Failed to update notification settings',
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'An error occurred: $e',
+      };
+    }
+  }
+  
   Future<Map<String, dynamic>> getFavoriteTurfs() async {
     try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}${ApiConfig.favorites}'),
-        headers: _getHeaders(),
+        Uri.parse('${ApiConfig.baseUrl}/user/favorites'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
       );
-
+      
       final responseData = json.decode(response.body);
-
+      
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'turfs': responseData['turfs'],
+          'turfs': responseData['data'] ?? responseData,
         };
       } else {
         return {
           'success': false,
-          'message': responseData['message'] ?? 'Failed to fetch favorite turfs',
+          'message': responseData['message'] ?? 'Failed to load favorite turfs',
         };
       }
     } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error: $e',
+        'message': 'An error occurred: $e',
       };
     }
-  }
-
-  Map<String, String> _getHeaders() {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (authToken != null) {
-      headers['Authorization'] = 'Bearer $authToken';
-    }
-
-    return headers;
   }
 }

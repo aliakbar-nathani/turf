@@ -12,6 +12,7 @@ import '../booking/create_booking_screen.dart';
 import '../auth/login_screen.dart';
 import 'reviews_screen.dart';
 import 'add_review_screen.dart';
+import 'image_gallery_screen.dart';
 import '../main_screen.dart';
 
 class TurfDetailScreen extends StatefulWidget {
@@ -255,6 +256,35 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
     );
   }
   
+  void _openImageGallery(int initialIndex) {
+    if (_turf == null) return;
+    
+    // Create a list of all images (main image + additional images)
+    List<String> allImages = [_turf!.imageUrl];
+    if (_turf!.additionalImages.isNotEmpty) {
+      allImages.addAll(_turf!.additionalImages);
+    }
+    
+    // Filter out empty image URLs
+    allImages = allImages.where((url) => url.isNotEmpty).toList();
+    
+    if (allImages.isEmpty) {
+      // No valid images to show
+      return;
+    }
+    
+    // Navigate to the image gallery
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageGalleryScreen(
+          images: allImages,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -344,33 +374,74 @@ class _TurfDetailScreenState extends State<TurfDetailScreen> {
             background: Stack(
               fit: StackFit.expand,
               children: [
-                _turf!.imageUrl.isNotEmpty
-                    ? CachedNetworkImage(
-                        imageUrl: _turf!.imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Center(
-                          child: SpinKitFadingCircle(
-                            color: AppTheme.primaryColor,
-                            size: 30.0,
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.sports_soccer,
-                            size: 80,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        color: Colors.grey[300],
-                        child: const Icon(
-                          Icons.sports_soccer,
-                          size: 80,
-                          color: Colors.grey,
-                        ),
+                PageView.builder(
+                  itemCount: 1 + (_turf!.additionalImages.isNotEmpty ? _turf!.additionalImages.length : 0),
+                  itemBuilder: (context, index) {
+                    // First image is the main image, then we show additional images
+                    final imageUrl = index == 0 ? _turf!.imageUrl : _turf!.additionalImages[index - 1];
+                    
+                    return GestureDetector(
+                      onTap: () {
+                        _openImageGallery(index);
+                      },
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          imageUrl.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Center(
+                                  child: SpinKitFadingCircle(
+                                    color: AppTheme.primaryColor,
+                                    size: 30.0,
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(
+                                    Icons.sports_soccer,
+                                    size: 80,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.sports_soccer,
+                                  size: 80,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                        ],
                       ),
+                    );
+                  },
+                ),
+                // Image counter indicator
+                if (_turf!.additionalImages.isNotEmpty)
+                  Positioned(
+                    top: 16.0,
+                    right: 16.0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.6),
+                        borderRadius: BorderRadius.circular(12.0),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.photo_library, color: Colors.white, size: 16.0),
+                          const SizedBox(width: 4.0),
+                          Text(
+                            '${1 + _turf!.additionalImages.length} photos',
+                            style: const TextStyle(color: Colors.white, fontSize: 12.0),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 // Gradient for better text readability
                 Container(
                   decoration: BoxDecoration(
