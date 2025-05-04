@@ -211,4 +211,7 @@ class Booking {
   }
 
   String get timeRange => '$startTime - $endTime';
+  
+  // Formatted time slot getter for display purposes
+  String get formattedTimeSlot => timeRange;
 }

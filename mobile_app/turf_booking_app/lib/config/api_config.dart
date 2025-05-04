@@ -39,7 +39,8 @@ class ApiConfig {
   static const String notifications = '/api/mobile/user/notifications';
   
   // Payment endpoints
-  static const String checkout = '/api/mobile/payment/checkout';
+  static const String checkout = '/payment/mobile-checkout';
+  static const String paymentStatus = '/payment/mobile-status';
   static const String paymentMethods = '/api/mobile/payment/methods';
   
   // Review endpoints
