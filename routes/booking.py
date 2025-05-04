@@ -11,6 +11,51 @@ from wtforms.validators import DataRequired
 
 booking = Blueprint('booking', __name__)
 
+@booking.route('/api/turf/time_slots', methods=['GET'])
+def get_time_slots():
+    """API endpoint to get available time slots for a turf on a specific date"""
+    turf_id = request.args.get('turf_id', type=int)
+    date_str = request.args.get('date')
+    
+    if not turf_id or not date_str:
+        return jsonify({
+            'success': False,
+            'error': 'Turf ID and date are required parameters'
+        }), 400
+    
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({
+            'success': False,
+            'error': 'Invalid date format. Use YYYY-MM-DD'
+        }), 400
+    
+    turf = Turf.query.get_or_404(turf_id)
+    
+    # Get available time slots
+    available_slots = turf.get_available_slots(date_obj)
+    
+    # Format the slots for JSON response
+    formatted_slots = []
+    for slot in available_slots:
+        formatted_slots.append({
+            'id': slot.id,
+            'day_of_week': slot.day_of_week,
+            'start_time': slot.start_time.strftime('%H:%M'),
+            'end_time': slot.end_time.strftime('%H:%M'),
+            'value': f"{slot.start_time.strftime('%H:%M')} - {slot.end_time.strftime('%H:%M')}",
+            'text': f"{slot.start_time.strftime('%I:%M %p')} - {slot.end_time.strftime('%I:%M %p')}",
+            'price_adjustment': slot.price_adjustment
+        })
+    
+    return jsonify({
+        'success': True,
+        'turf_id': turf_id,
+        'date': date_str,
+        'time_slots': formatted_slots
+    })
+
 @booking.route('/turfs/<int:turf_id>')
 def view_turf(turf_id):
     turf = Turf.query.get_or_404(turf_id)
