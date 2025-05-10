@@ -24,21 +24,24 @@ def create_booking():
     turf_choices = [(t.id, t.name) for t in Turf.query.filter_by(owner_id=current_user.id).all()]
     form.turf_id.choices = turf_choices if turf_choices else [(0, "No turfs available")]
     
-    # Always initialize time_slot choices
-    form.time_slot.choices = [("", "Select a turf first")]
+    # Get selected turf (either from form or default to first turf)
+    selected_turf_id = None
+    if request.method == 'POST' and form.turf_id.data:
+        selected_turf_id = form.turf_id.data
+    elif turf_choices:
+        selected_turf_id = turf_choices[0][0]
+        form.turf_id.data = selected_turf_id
     
-    if request.method == 'GET' and turf_choices:
-        # If we have turfs, preselect the first one
-        form.turf_id.data = turf_choices[0][0]
-        
-        # Populate time slots for the selected turf
-        turf_id = form.turf_id.data
-        time_slots = TimeSlot.query.filter_by(turf_id=turf_id).all()
+    # Populate time slots for the selected turf
+    if selected_turf_id:
+        time_slots = TimeSlot.query.filter_by(turf_id=selected_turf_id).all()
         if time_slots:
             time_slot_choices = [(f"{slot.start_time}-{slot.end_time}", f"{slot.start_time} - {slot.end_time}") for slot in time_slots]
             form.time_slot.choices = time_slot_choices
         else:
-            form.time_slot.choices = [("", "No time slots available")]
+            form.time_slot.choices = [("no_slots", "No time slots available")]
+    else:
+        form.time_slot.choices = [("no_turf", "Select a turf first")]
     
     if form.validate_on_submit():
         try:
@@ -48,8 +51,13 @@ def create_booking():
                 return redirect(url_for('owner_direct_booking.create_booking'))
                 
             # Parse time slot
-            if not form.time_slot.data or form.time_slot.data == "":
+            if not form.time_slot.data or form.time_slot.data in ["", "no_slots", "no_turf"]:
                 flash('Please select a valid time slot', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+                
+            # Check if it's a valid time slot format (should contain a hyphen)
+            if '-' not in form.time_slot.data:
+                flash('Invalid time slot format', 'danger')
                 return redirect(url_for('owner_direct_booking.create_booking'))
                 
             start_time, end_time = form.time_slot.data.split('-')

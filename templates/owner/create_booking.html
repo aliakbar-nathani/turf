@@ -231,32 +231,49 @@
         if (turfSelect) {
             turfSelect.addEventListener('change', function() {
                 const turfId = this.value;
-                
-                // Fetch time slots for selected turf
-                fetch(`/owner/get-time-slots/${turfId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const timeSlotSelect = document.getElementById('time_slot');
-                        timeSlotSelect.innerHTML = '';
-                        
-                        if (data.slots && data.slots.length > 0) {
-                            data.slots.forEach(slot => {
-                                const option = document.createElement('option');
-                                option.value = slot.value;
-                                option.textContent = slot.text;
-                                timeSlotSelect.appendChild(option);
-                            });
-                        } else {
-                            const option = document.createElement('option');
-                            option.value = '';
-                            option.textContent = 'No time slots available';
-                            timeSlotSelect.appendChild(option);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching time slots:', error);
-                    });
+                updateTimeSlots(turfId);
             });
+            
+            // Also update on page load if there's a turf selected
+            if (turfSelect.value) {
+                updateTimeSlots(turfSelect.value);
+            }
+        }
+        
+        // Function to update time slots based on selected turf
+        function updateTimeSlots(turfId) {
+            // Fetch time slots for selected turf
+            fetch(`/owner/get-time-slots/${turfId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const timeSlotSelect = document.getElementById('time_slot');
+                    timeSlotSelect.innerHTML = '';
+                    
+                    if (data.slots && data.slots.length > 0) {
+                        data.slots.forEach(slot => {
+                            const option = document.createElement('option');
+                            option.value = slot.value;
+                            option.textContent = slot.text;
+                            timeSlotSelect.appendChild(option);
+                        });
+                    } else {
+                        const option = document.createElement('option');
+                        option.value = 'no_slots';
+                        option.textContent = 'No time slots available';
+                        timeSlotSelect.appendChild(option);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching time slots:', error);
+                    
+                    // Add fallback option in case of error
+                    const timeSlotSelect = document.getElementById('time_slot');
+                    timeSlotSelect.innerHTML = '';
+                    const option = document.createElement('option');
+                    option.value = 'error';
+                    option.textContent = 'Error loading time slots';
+                    timeSlotSelect.appendChild(option);
+                });
         }
     });
 </script>
