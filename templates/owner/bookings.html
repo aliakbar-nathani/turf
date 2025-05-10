@@ -182,11 +182,11 @@
                                                             </div>
                                                             
                                                             <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
-                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                                <input type="hidden" name="action" value="payment_received_offline">
+                                                                {{ simple_action_form.hidden_tag() }}
+                                                                {{ simple_action_form.action(value="payment_received_offline") }}
                                                                 <div class="text-end">
                                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn btn-success">Confirm Payment Received</button>
+                                                                    {{ simple_action_form.submit(class="btn btn-success", value="Confirm Payment Received") }}
                                                                 </div>
                                                             </form>
                                                         </div>
@@ -201,15 +201,15 @@
                                                 <ul class="dropdown-menu">
                                                     <li>
                                                         <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <input type="hidden" name="action" value="mark_completed">
+                                                            {{ simple_action_form.hidden_tag() }}
+                                                            {{ simple_action_form.action(value="mark_completed") }}
                                                             <button type="submit" class="btn btn-link text-success p-0">Mark as Completed</button>
                                                         </form>
                                                     </li>
                                                     <li>
                                                         <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
-                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                            <input type="hidden" name="action" value="payment_received_offline">
+                                                            {{ simple_action_form.hidden_tag() }}
+                                                            {{ simple_action_form.action(value="payment_received_offline") }}
                                                             <button type="submit" class="btn btn-link text-primary p-0">Confirm Payment</button>
                                                         </form>
                                                     </li>
@@ -290,24 +290,27 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Handle radio buttons to show/hide counter price input
-        const radioButtons = document.querySelectorAll('input[type=radio][name=action]');
-        radioButtons.forEach(function(radio) {
-            radio.addEventListener('change', function() {
-                const modalId = this.id.replace('accept', '').replace('reject', '').replace('counter', '');
-                const counterPriceContainer = document.querySelector('.counter-price-container');
-                const counterMessageContainer = document.querySelector('.counter-message-container');
-                
-                if (this.value === 'counter') {
-                    counterPriceContainer.style.display = 'block';
-                    counterMessageContainer.style.display = 'block';
-                } else {
-                    counterPriceContainer.style.display = 'none';
-                    if (this.value === 'reject') {
+        const respondModals = document.querySelectorAll('[id^="respondModal"]');
+        
+        respondModals.forEach(function(modal) {
+            const radioButtons = modal.querySelectorAll('input[type=radio][name="action"]');
+            const counterPriceContainer = modal.querySelector('.counter-price-container');
+            const counterMessageContainer = modal.querySelector('.counter-message-container');
+            
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'counter') {
+                        counterPriceContainer.style.display = 'block';
                         counterMessageContainer.style.display = 'block';
                     } else {
-                        counterMessageContainer.style.display = 'none';
+                        counterPriceContainer.style.display = 'none';
+                        if (this.value === 'reject') {
+                            counterMessageContainer.style.display = 'block';
+                        } else {
+                            counterMessageContainer.style.display = 'none';
+                        }
                     }
-                }
+                });
             });
         });
     });
