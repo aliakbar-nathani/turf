@@ -846,6 +846,417 @@ def create_booking(current_user):
             'message': f'Error creating booking: {str(e)}'
         }), 500
 
+# Owner-specific API endpoints
+@mobile_api.route('/owner/turfs', methods=['GET'])
+@token_required
+def get_owner_turfs(current_user):
+    """Get all turfs owned by the current user"""
+    # Check if user is an owner
+    if current_user.role != UserRole.OWNER and current_user.role != UserRole.ADMIN:
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to access owner turfs'
+        }), 403
+    
+    try:
+        # Get all turfs owned by the current user
+        turfs = Turf.query.filter_by(owner_id=current_user.id).all()
+        
+        turfs_data = []
+        for turf in turfs:
+            # Get primary image if available
+            primary_image = None
+            images = turf.images.all()
+            if images:
+                for img in images:
+                    if img.is_primary:
+                        primary_image = img
+                        break
+                if not primary_image and images:
+                    primary_image = images[0]
+            
+            # Get total bookings count
+            total_bookings = Booking.query.filter_by(turf_id=turf.id).count()
+            
+            # Get pending bookings count
+            pending_bookings = Booking.query.filter_by(
+                turf_id=turf.id, 
+                status=BookingStatus.PENDING
+            ).count()
+            
+            # Get active negotiations count
+            negotiations = Booking.query.filter_by(
+                turf_id=turf.id, 
+                status=BookingStatus.NEGOTIATING
+            ).count()
+            
+            # Build turf data
+            turf_data = {
+                'id': turf.id,
+                'name': turf.name,
+                'address': turf.address,
+                'city': turf.city,
+                'base_price_per_hour': turf.base_price_per_hour,
+                'indoor': turf.indoor,
+                'rating': turf.get_average_rating(),
+                'review_count': turf.get_rating_count(),
+                'total_bookings': total_bookings,
+                'pending_bookings': pending_bookings,
+                'active_negotiations': negotiations,
+                'image': primary_image.url if primary_image else None,
+                'created_at': turf.created_at.strftime('%Y-%m-%d')
+            }
+            turfs_data.append(turf_data)
+        
+        return jsonify({
+            'success': True,
+            'turfs': turfs_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching owner turfs: {str(e)}'
+        }), 500
+
+@mobile_api.route('/owner/analytics', methods=['GET'])
+@token_required
+def get_owner_analytics(current_user):
+    """Get analytics data for owner's turfs"""
+    # Check if user is an owner
+    if current_user.role != UserRole.OWNER and current_user.role != UserRole.ADMIN:
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to access owner analytics'
+        }), 403
+    
+    try:
+        # Get turf ID from query params
+        turf_id = request.args.get('turf_id', None, type=int)
+        
+        # Get all turfs owned by the current user
+        turfs = Turf.query.filter_by(owner_id=current_user.id).all()
+        
+        if not turfs:
+            return jsonify({
+                'success': False,
+                'message': 'You need to add a turf before viewing analytics'
+            }), 400
+        
+        # If no turf_id is specified, use the first turf
+        if turf_id is None:
+            turf_id = turfs[0].id
+        
+        # Verify that the turf belongs to the current user
+        selected_turf = next((t for t in turfs if t.id == turf_id), None)
+        if not selected_turf:
+            return jsonify({
+                'success': False,
+                'message': 'Selected turf not found or not owned by you'
+            }), 404
+        
+        # Time periods for analytics
+        current_date = datetime.datetime.utcnow().date()
+        thirty_days_ago = current_date - datetime.timedelta(days=30)
+        ninety_days_ago = current_date - datetime.timedelta(days=90)
+        
+        # Calculate revenue metrics
+        monthly_revenue = db.session.query(db.func.sum(Booking.total_price)).filter(
+            Booking.turf_id == selected_turf.id,
+            Booking.booking_date >= thirty_days_ago,
+            Booking.booking_date <= current_date,
+            Booking.status == BookingStatus.COMPLETED,
+            Booking.payment_status == 'paid'
+        ).scalar() or 0
+        
+        # Get booking counts
+        total_bookings = Booking.query.filter(
+            Booking.turf_id == selected_turf.id,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+        ).count()
+        
+        # Get recent bookings
+        recent_bookings = Booking.query.filter(
+            Booking.turf_id == selected_turf.id,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+        ).order_by(Booking.created_at.desc()).limit(5).all()
+        
+        recent_bookings_data = []
+        for booking in recent_bookings:
+            user = User.query.get(booking.user_id)
+            recent_bookings_data.append({
+                'id': booking.id,
+                'username': user.username,
+                'booking_date': booking.booking_date.strftime('%Y-%m-%d'),
+                'time_slot': f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}",
+                'total_price': booking.total_price,
+                'status': booking.status,
+                'payment_status': booking.payment_status
+            })
+        
+        # Get negotiation data
+        negotiation_count = Negotiation.query.join(Booking).filter(
+            Booking.turf_id == selected_turf.id
+        ).count()
+        
+        # Calculate average negotiation percentage
+        negotiations = Negotiation.query.join(Booking).filter(
+            Booking.turf_id == selected_turf.id,
+            Negotiation.is_accepted == True
+        ).all()
+        
+        total_negotiation_percentage = 0
+        successful_negotiations = 0
+        
+        for negotiation in negotiations:
+            booking = Booking.query.get(negotiation.booking_id)
+            if booking and booking.original_price > 0:
+                percentage = ((booking.total_price - booking.original_price) / booking.original_price) * 100
+                total_negotiation_percentage += percentage
+                successful_negotiations += 1
+        
+        avg_negotiation_percentage = round(total_negotiation_percentage / successful_negotiations, 2) if successful_negotiations > 0 else 0
+        
+        # Get booking distribution by day of week
+        bookings_by_day = {}
+        
+        days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        
+        # Initialize all days with 0 bookings
+        for i, day in enumerate(days_of_week):
+            bookings_by_day[i] = 0
+        
+        # Populate with actual booking counts
+        bookings_last_90_days = Booking.query.filter(
+            Booking.turf_id == selected_turf.id,
+            Booking.booking_date >= ninety_days_ago,
+            Booking.booking_date <= current_date,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.COMPLETED])
+        ).all()
+        
+        for booking in bookings_last_90_days:
+            # Get day of week as integer (0 = Monday, 6 = Sunday)
+            day_of_week = booking.booking_date.weekday()
+            bookings_by_day[day_of_week] = bookings_by_day.get(day_of_week, 0) + 1
+        
+        # Find the most and least popular days
+        most_popular_day_index = max(bookings_by_day, key=bookings_by_day.get) if bookings_by_day else 0
+        
+        # Find the least popular day (excluding days with 0 bookings if possible)
+        min_bookings = float('inf')
+        least_popular_day_index = 0
+        
+        for day_index, count in bookings_by_day.items():
+            if 0 < count < min_bookings:
+                min_bookings = count
+                least_popular_day_index = day_index
+        
+        # If all days have 0 bookings, pick the first day
+        if min_bookings == float('inf'):
+            least_popular_day_index = 0
+            min_bookings = 0
+        
+        most_popular_day = days_of_week[most_popular_day_index] if bookings_by_day else 'No data'
+        least_popular_day = days_of_week[least_popular_day_index] if min_bookings < float('inf') else 'No data'
+        
+        # Prepare chart data
+        chart_data = {
+            'bookingsByDay': [bookings_by_day.get(i, 0) for i in range(7)],
+            'daysOfWeek': days_of_week
+        }
+        
+        # Different format for JSON serialization
+        chart_data_json = {
+            'labels': days_of_week,
+            'datasets': [{
+                'label': 'Bookings',
+                'data': [bookings_by_day.get(i, 0) for i in range(7)]
+            }]
+        }
+        
+        # Build response
+        return jsonify({
+            'success': True,
+            'turf': {
+                'id': selected_turf.id,
+                'name': selected_turf.name
+            },
+            'turfs': [{'id': t.id, 'name': t.name} for t in turfs],
+            'analytics': {
+                'monthly_revenue': monthly_revenue,
+                'total_bookings': total_bookings,
+                'negotiation_count': negotiation_count,
+                'avg_negotiation_percentage': avg_negotiation_percentage,
+                'most_popular_day': most_popular_day,
+                'least_popular_day': least_popular_day,
+                'chart_data': chart_data_json,
+                'recent_bookings': recent_bookings_data
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching analytics: {str(e)}'
+        }), 500
+
+@mobile_api.route('/owner/negotiations/respond/<int:booking_id>', methods=['POST'])
+@token_required
+def owner_respond_to_negotiation(current_user, booking_id):
+    """Owner endpoint to respond to a negotiation"""
+    # Check if user is an owner
+    if current_user.role != UserRole.OWNER and current_user.role != UserRole.ADMIN:
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to respond to negotiations'
+        }), 403
+    
+    # Forward to the general respond_to_negotiation function
+    return respond_to_negotiation(current_user, booking_id)
+
+# Create direct booking by owner for customers not using the app
+@mobile_api.route('/owner/bookings/create', methods=['POST'])
+@token_required
+def create_owner_booking(current_user):
+    """Create a direct booking by owner for customers who are not on the app"""
+    # Check if user is an owner
+    if current_user.role != UserRole.OWNER and current_user.role != UserRole.ADMIN:
+        return jsonify({
+            'success': False,
+            'message': 'You do not have permission to create owner bookings'
+        }), 403
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
+        
+        # Extract booking data
+        turf_id = data.get('turf_id')
+        customer_name = data.get('customer_name')
+        customer_phone = data.get('customer_phone')
+        booking_date_str = data.get('booking_date')
+        start_time_str = data.get('start_time')
+        end_time_str = data.get('end_time')
+        total_price = data.get('total_price')
+        payment_method = data.get('payment_method', 'pay_on_arrival')
+        notes = data.get('notes', '')
+        
+        # Validate required fields
+        if not all([turf_id, customer_name, customer_phone, booking_date_str, start_time_str, end_time_str, total_price]):
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields'
+            }), 400
+        
+        # Verify turf ownership
+        turf = Turf.query.get(turf_id)
+        if not turf or turf.owner_id != current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'Turf not found or not owned by you'
+            }), 404
+        
+        # Parse date and time
+        try:
+            booking_date = datetime.datetime.strptime(booking_date_str, '%Y-%m-%d').date()
+            start_time = datetime.datetime.strptime(start_time_str, '%H:%M').time()
+            end_time = datetime.datetime.strptime(end_time_str, '%H:%M').time()
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': 'Invalid date or time format. Use YYYY-MM-DD for dates and HH:MM for times.'
+            }), 400
+        
+        # Verify that the booking date is not in the past
+        if booking_date < datetime.datetime.utcnow().date():
+            return jsonify({
+                'success': False,
+                'message': 'Cannot book for a date in the past'
+            }), 400
+        
+        # Verify that start time is before end time
+        if start_time >= end_time:
+            return jsonify({
+                'success': False,
+                'message': 'Start time must be before end time'
+            }), 400
+        
+        # Check availability - verify no overlapping bookings
+        existing_bookings = Booking.query.filter(
+            Booking.turf_id == turf_id,
+            Booking.booking_date == booking_date,
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAYMENT_PENDING, BookingStatus.PENDING, BookingStatus.NEGOTIATING]),
+            ~((Booking.end_time <= start_time) | (Booking.start_time >= end_time))
+        ).all()
+        
+        if existing_bookings:
+            return jsonify({
+                'success': False,
+                'message': 'Time slot is already booked'
+            }), 400
+        
+        # Create a booking record directly with CONFIRMED status
+        # Since this is an owner-created booking, we'll use a placeholder user account or the owner's account
+        # In a real-world scenario, you might want to have a "walk-in customer" account
+        try:
+            # Create a new booking
+            booking = Booking(
+                turf_id=turf_id,
+                user_id=current_user.id,  # Using owner's account as placeholder
+                booking_date=booking_date,
+                start_time=start_time,
+                end_time=end_time,
+                total_price=float(total_price),
+                original_price=float(total_price),
+                status=BookingStatus.CONFIRMED,  # Direct bookings are automatically confirmed
+                payment_method=payment_method
+            )
+            
+            # Set payment status based on method
+            if payment_method == 'pay_on_arrival':
+                booking.payment_status = 'unpaid'
+            else:
+                booking.payment_status = 'paid'
+            
+            db.session.add(booking)
+            
+            # Add a note about this being an owner-created booking for a customer
+            note = f"Owner-created booking for {customer_name} (Phone: {customer_phone})"
+            if notes:
+                note += f". Notes: {notes}"
+            
+            # Update the database
+            db.session.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Booking created successfully',
+                'booking': {
+                    'id': booking.id,
+                    'turf_name': turf.name,
+                    'booking_date': booking_date_str,
+                    'time_slot': f"{start_time_str} - {end_time_str}",
+                    'total_price': total_price,
+                    'customer_name': customer_name,
+                    'customer_phone': customer_phone,
+                    'payment_method': payment_method,
+                    'status': booking.status
+                }
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error creating booking: {str(e)}'
+            }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error creating owner booking: {str(e)}'
+        }), 500
+
 @mobile_api.route('/bookings/user', methods=['GET'])
 @mobile_api.route('/user/bookings', methods=['GET'])  # Add the endpoint the mobile app is using
 @token_required
