@@ -2,21 +2,25 @@ class User {
   final int id;
   final String username;
   final String email;
-  final String phoneNumber;
+  final String? phoneNumber;
   final String role;
-  final String? profileImage;
-  final int? favoriteCount;
-  final int? bookingCount;
+  final String? profileImageUrl;
+  final String createdAt;
+  final String? updatedAt;
+  final bool isActive;
+  final Map<String, dynamic>? notificationSettings;
 
   User({
     required this.id,
     required this.username,
     required this.email,
-    required this.phoneNumber,
+    this.phoneNumber,
     required this.role,
-    this.profileImage,
-    this.favoriteCount,
-    this.bookingCount,
+    this.profileImageUrl,
+    required this.createdAt,
+    this.updatedAt,
+    required this.isActive,
+    this.notificationSettings,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,9 +30,11 @@ class User {
       email: json['email'],
       phoneNumber: json['phone_number'],
       role: json['role'],
-      profileImage: json['profile_image'],
-      favoriteCount: json['favorite_count'],
-      bookingCount: json['booking_count'],
+      profileImageUrl: json['profile_image_url'],
+      createdAt: json['created_at'],
+      updatedAt: json['updated_at'],
+      isActive: json['is_active'] ?? true,
+      notificationSettings: json['notification_settings'],
     );
   }
 
@@ -39,31 +45,15 @@ class User {
       'email': email,
       'phone_number': phoneNumber,
       'role': role,
-      'profile_image': profileImage,
-      'favorite_count': favoriteCount,
-      'booking_count': bookingCount,
+      'profile_image_url': profileImageUrl,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+      'is_active': isActive,
+      'notification_settings': notificationSettings,
     };
   }
 
-  User copyWith({
-    int? id,
-    String? username,
-    String? email,
-    String? phoneNumber,
-    String? role,
-    String? profileImage,
-    int? favoriteCount,
-    int? bookingCount,
-  }) {
-    return User(
-      id: id ?? this.id,
-      username: username ?? this.username,
-      email: email ?? this.email,
-      phoneNumber: phoneNumber ?? this.phoneNumber,
-      role: role ?? this.role,
-      profileImage: profileImage ?? this.profileImage,
-      favoriteCount: favoriteCount ?? this.favoriteCount,
-      bookingCount: bookingCount ?? this.bookingCount,
-    );
-  }
+  bool get isOwner => role == 'owner';
+  bool get isAdmin => role == 'admin';
+  bool get isRegularUser => role == 'user';
 }
