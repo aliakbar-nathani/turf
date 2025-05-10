@@ -19,8 +19,8 @@
                     <label for="status" class="form-label">Filter by Status</label>
                     <select name="status" id="status" class="form-select" onchange="this.form.submit()">
                         <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Bookings</option>
-                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
                         <option value="negotiating" {% if status_filter == 'negotiating' %}selected{% endif %}>Negotiating</option>
+                        <option value="payment_pending" {% if status_filter == 'payment_pending' %}selected{% endif %}>Payment Pending</option>
                         <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
                         <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
                         <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>

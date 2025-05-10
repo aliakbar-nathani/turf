@@ -771,7 +771,7 @@ def create_booking(current_user):
         payment_method = 'pending_negotiation'
     else:
         # Direct booking - use selected payment method
-        status = BookingStatus.PAYMENT_PENDING if payment_option == 'pay_online' else BookingStatus.PENDING
+        status = BookingStatus.PAYMENT_PENDING if payment_option == 'pay_online' else BookingStatus.CONFIRMED
         payment_method = payment_option
     
     # Create the booking
@@ -878,10 +878,10 @@ def get_owner_turfs(current_user):
             # Get total bookings count
             total_bookings = Booking.query.filter_by(turf_id=turf.id).count()
             
-            # Get pending bookings count
+            # Get bookings waiting payment count
             pending_bookings = Booking.query.filter_by(
                 turf_id=turf.id, 
-                status=BookingStatus.PENDING
+                status=BookingStatus.PAYMENT_PENDING
             ).count()
             
             # Get active negotiations count
@@ -1195,7 +1195,7 @@ def create_owner_booking(current_user):
         existing_bookings = Booking.query.filter(
             Booking.turf_id == turf_id,
             Booking.booking_date == booking_date,
-            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAYMENT_PENDING, BookingStatus.PENDING, BookingStatus.NEGOTIATING]),
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PAYMENT_PENDING, BookingStatus.NEGOTIATING]),
             ~((Booking.end_time <= start_time) | (Booking.start_time >= end_time))
         ).all()
         

@@ -30,10 +30,10 @@ def dashboard():
         Booking.status == BookingStatus.CONFIRMED
     ).count()
     
-    # Pending bookings (including negotiations)
+    # Bookings in negotiation
     pending_bookings = db.session.query(Booking).join(Turf).filter(
         Turf.owner_id == current_user.id,
-        Booking.status.in_([BookingStatus.PENDING, BookingStatus.NEGOTIATING])
+        Booking.status == BookingStatus.NEGOTIATING
     ).count()
     
     # Recent revenue (last 30 days)
