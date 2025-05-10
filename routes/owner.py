@@ -30,10 +30,10 @@ def dashboard():
         Booking.status == BookingStatus.CONFIRMED
     ).count()
     
-    # Bookings in negotiation
+    # Pending bookings (including negotiations)
     pending_bookings = db.session.query(Booking).join(Turf).filter(
         Turf.owner_id == current_user.id,
-        Booking.status == BookingStatus.NEGOTIATING
+        Booking.status.in_([BookingStatus.PENDING, BookingStatus.NEGOTIATING])
     ).count()
     
     # Recent revenue (last 30 days)
@@ -331,7 +331,7 @@ def respond_booking(booking_id):
         abort(403)
     
     # Check if booking is in a negotiable state
-    if booking.status not in [BookingStatus.NEGOTIATING]:
+    if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING]:
         flash('This booking is no longer negotiable.', 'warning')
         return redirect(url_for('owner.bookings'))
     
