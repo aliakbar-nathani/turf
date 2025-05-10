@@ -1,11 +1,15 @@
 class ApiConfig {
   // Base URL for API requests
-  static const String baseUrl = 'https://turf-booking-app.example.com/api';
+  // In development mode: Use localhost
+  // static const String baseUrl = 'http://localhost:5000/api/mobile';
+  
+  // In production: Use the deployed API URL
+  static const String baseUrl = 'https://turf-booking-app.replit.app/api/mobile';
 
   // API endpoints
-  static const String loginEndpoint = '/auth/login';
-  static const String registerEndpoint = '/auth/register';
-  static const String registerOwnerEndpoint = '/auth/register-owner';
+  static const String loginEndpoint = '/login';
+  static const String registerEndpoint = '/register';
+  static const String registerOwnerEndpoint = '/register-owner';
   static const String profileEndpoint = '/user/profile';
   static const String turfsEndpoint = '/turfs';
   static const String bookingsEndpoint = '/bookings';
