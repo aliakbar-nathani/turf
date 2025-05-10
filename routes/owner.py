@@ -5,7 +5,7 @@ import json
 
 from app import db
 from models import User, Turf, TurfImage, TimeSlot, Booking, BookingStatus, Negotiation
-from forms import TurfForm, TimeSlotForm, DirectBookingForm
+from forms import TurfForm, TimeSlotForm, DirectBookingForm, BookingActionForm, SimpleBookingActionForm
 
 owner = Blueprint('owner', __name__)
 
@@ -311,12 +311,18 @@ def bookings():
     # Get all turfs for the filter dropdown
     turfs = Turf.query.filter_by(owner_id=current_user.id).all()
     
+    # Create forms for each action type
+    booking_action_form = BookingActionForm()
+    simple_action_form = SimpleBookingActionForm()
+    
     return render_template(
         'owner/bookings.html',
         bookings=bookings,
         status_filter=status_filter,
         turf_id=turf_id,
         turfs=turfs,
+        booking_action_form=booking_action_form,
+        simple_action_form=simple_action_form,
         title='Bookings'
     )
 
