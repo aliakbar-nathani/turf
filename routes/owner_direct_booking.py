@@ -21,31 +21,51 @@ def create_booking():
     form = DirectBookingForm()
     
     # Populate the turf select field with turfs owned by the current user
-    form.turf_id.choices = [(t.id, t.name) for t in Turf.query.filter_by(owner_id=current_user.id).all()]
+    turf_choices = [(t.id, t.name) for t in Turf.query.filter_by(owner_id=current_user.id).all()]
+    form.turf_id.choices = turf_choices if turf_choices else [(0, "No turfs available")]
     
-    if request.method == 'GET' and form.turf_id.choices:
+    # Always initialize time_slot choices
+    form.time_slot.choices = [("", "Select a turf first")]
+    
+    if request.method == 'GET' and turf_choices:
         # If we have turfs, preselect the first one
-        form.turf_id.data = form.turf_id.choices[0][0]
+        form.turf_id.data = turf_choices[0][0]
         
         # Populate time slots for the selected turf
         turf_id = form.turf_id.data
         time_slots = TimeSlot.query.filter_by(turf_id=turf_id).all()
-        time_slot_choices = [(f"{slot.start_time}-{slot.end_time}", f"{slot.start_time} - {slot.end_time}") for slot in time_slots]
-        form.time_slot.choices = time_slot_choices
+        if time_slots:
+            time_slot_choices = [(f"{slot.start_time}-{slot.end_time}", f"{slot.start_time} - {slot.end_time}") for slot in time_slots]
+            form.time_slot.choices = time_slot_choices
+        else:
+            form.time_slot.choices = [("", "No time slots available")]
     
     if form.validate_on_submit():
-        # Parse time slot
-        start_time, end_time = form.time_slot.data.split('-')
-        
-        # Get the turf
-        turf = Turf.query.get(form.turf_id.data)
-        if not turf:
-            flash('Turf not found', 'danger')
-            return redirect(url_for('owner_direct_booking.create_booking'))
+        try:
+            # Check if turf_id is the default "no turfs" value
+            if form.turf_id.data == 0:
+                flash('Please add a turf before creating a booking', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+                
+            # Parse time slot
+            if not form.time_slot.data or form.time_slot.data == "":
+                flash('Please select a valid time slot', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+                
+            start_time, end_time = form.time_slot.data.split('-')
             
-        # Check if the turf belongs to the current user
-        if turf.owner_id != current_user.id:
-            flash('You do not own this turf', 'danger')
+            # Get the turf
+            turf = Turf.query.get(form.turf_id.data)
+            if not turf:
+                flash('Turf not found', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+                
+            # Check if the turf belongs to the current user
+            if turf.owner_id != current_user.id:
+                flash('You do not own this turf', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+        except Exception as e:
+            flash(f'Error processing form: {str(e)}', 'danger')
             return redirect(url_for('owner_direct_booking.create_booking'))
         
         # Create a user account for the customer if they don't already have one
@@ -55,16 +75,22 @@ def create_booking():
             customer_id = existing_user.id
         else:
             # Create a temporary username based on phone number and name
-            clean_name = form.customer_name.data.lower().replace(' ', '_')
-            username = f"{clean_name}_{form.customer_phone.data[-4:]}"
+            if form.customer_name.data:
+                clean_name = form.customer_name.data.lower().replace(' ', '_')
+                username = f"{clean_name}_{form.customer_phone.data[-4:]}"
+            else:
+                username = f"customer_{form.customer_phone.data[-4:]}"
             
             # Create a temporary password
             temp_password = secrets.token_urlsafe(8)
             
-            # Create the user
+            # Create the user with a valid email
+            phone_digits = ''.join(c for c in form.customer_phone.data if c.isdigit())
+            email = f"customer_{phone_digits}@example.com"  # Placeholder email
+            
             new_user = User(
                 username=username,
-                email=f"{username}@example.com",  # Placeholder email
+                email=email,
                 phone_number=form.customer_phone.data,
                 password_hash=generate_password_hash(temp_password),
                 role='user'
@@ -74,7 +100,15 @@ def create_booking():
             customer_id = new_user.id
             
         # Create the booking
-        booking_date = datetime.strptime(form.booking_date.data, '%Y-%m-%d').date()
+        try:
+            if form.booking_date.data:
+                booking_date = datetime.strptime(form.booking_date.data, '%Y-%m-%d').date()
+            else:
+                flash('Please select a valid booking date', 'danger')
+                return redirect(url_for('owner_direct_booking.create_booking'))
+        except ValueError:
+            flash('Invalid date format. Please use YYYY-MM-DD', 'danger')
+            return redirect(url_for('owner_direct_booking.create_booking'))
         
         new_booking = Booking(
             user_id=customer_id,
