@@ -1,218 +1,128 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
 import '../../models/turf_model.dart';
-import '../../services/booking_service.dart';
 import '../../services/turf_service.dart';
+import '../../services/booking_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/loading_indicator.dart';
 
 class OwnerCreateBookingScreen extends StatefulWidget {
-  final int? initialTurfId;
-
-  const OwnerCreateBookingScreen({Key? key, this.initialTurfId}) : super(key: key);
+  const OwnerCreateBookingScreen({Key? key}) : super(key: key);
 
   @override
-  _OwnerCreateBookingScreenState createState() => _OwnerCreateBookingScreenState();
+  State<OwnerCreateBookingScreen> createState() => _OwnerCreateBookingScreenState();
 }
 
 class _OwnerCreateBookingScreenState extends State<OwnerCreateBookingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TurfService _turfService = TurfService();
-  final BookingService _bookingService = BookingService();
   
-  List<Turf> _turfs = [];
+  // Controllers
+  final _customerNameController = TextEditingController();
+  final _customerPhoneController = TextEditingController();
+  final _bookingDateController = TextEditingController();
+  final _startTimeController = TextEditingController();
+  final _endTimeController = TextEditingController();
+  final _totalPriceController = TextEditingController();
+  final _notesController = TextEditingController();
+  
+  // Services
+  final _turfService = TurfService();
+  final _bookingService = BookingService();
+  
+  // State variables
   bool _isLoading = true;
   bool _isSubmitting = false;
+  List<Turf> _ownerTurfs = [];
   String? _errorMessage;
-  
-  // Form fields
-  int? _selectedTurfId;
-  final TextEditingController _customerNameController = TextEditingController();
-  final TextEditingController _customerPhoneController = TextEditingController();
-  final TextEditingController _dateController = TextEditingController();
-  final TextEditingController _startTimeController = TextEditingController();
-  final TextEditingController _endTimeController = TextEditingController();
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
+  Turf? _selectedTurf;
   String _paymentMethod = 'pay_on_arrival';
-  
-  DateTime? _selectedDate;
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
 
   @override
   void initState() {
     super.initState();
     _loadOwnerTurfs();
-    if (widget.initialTurfId != null) {
-      _selectedTurfId = widget.initialTurfId;
-    }
     
-    // Initialize date to today
-    _selectedDate = DateTime.now();
-    _dateController.text = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+    // Set default date to today
+    _bookingDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
   }
-
+  
   @override
   void dispose() {
     _customerNameController.dispose();
     _customerPhoneController.dispose();
-    _dateController.dispose();
+    _bookingDateController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
-    _priceController.dispose();
+    _totalPriceController.dispose();
     _notesController.dispose();
     super.dispose();
   }
-
+  
   Future<void> _loadOwnerTurfs() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-
+    
     try {
       final result = await _turfService.getOwnerTurfs();
+      
       if (result['success']) {
         setState(() {
-          _turfs = result['turfs'];
-          if (_turfs.isNotEmpty && _selectedTurfId == null) {
-            _selectedTurfId = _turfs.first.id;
-          }
+          _ownerTurfs = result['turfs'];
           _isLoading = false;
+          
+          // Select first turf by default if available
+          if (_ownerTurfs.isNotEmpty) {
+            _selectedTurf = _ownerTurfs.first;
+            
+            // Pre-fill price with turf's base price
+            _totalPriceController.text = _selectedTurf!.basePricePerHour.toString();
+          }
         });
       } else {
         setState(() {
-          _errorMessage = result['message'] ?? 'Failed to load turfs';
           _isLoading = false;
+          _errorMessage = result['message'] ?? 'Failed to load turfs';
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error: $e';
         _isLoading = false;
+        _errorMessage = 'Error: $e';
       });
     }
   }
-
+  
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
+      initialDate: DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppTheme.primaryColor,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dateController.text = DateFormat('yyyy-MM-dd').format(picked);
-      });
-    }
-  }
-
-  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: isStartTime 
-          ? _startTime ?? TimeOfDay(hour: 9, minute: 0)
-          : _endTime ?? TimeOfDay(hour: 10, minute: 0),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppTheme.primaryColor,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      lastDate: DateTime.now().add(const Duration(days: 90)),
     );
     
     if (picked != null) {
       setState(() {
-        if (isStartTime) {
-          _startTime = picked;
-          _startTimeController.text = _formatTimeOfDay(picked);
-          
-          // If end time is not set or is before start time, set it to start time + 1 hour
-          if (_endTime == null || 
-              (_endTime!.hour < picked.hour || 
-              (_endTime!.hour == picked.hour && _endTime!.minute <= picked.minute))) {
-            final endHour = (picked.hour + 1) % 24;
-            _endTime = TimeOfDay(hour: endHour, minute: picked.minute);
-            _endTimeController.text = _formatTimeOfDay(_endTime!);
-          }
-        } else {
-          _endTime = picked;
-          _endTimeController.text = _formatTimeOfDay(picked);
-        }
-        
-        // Calculate price if both times are set
-        if (_startTime != null && _endTime != null && _selectedTurfId != null) {
-          _calculatePrice();
-        }
+        _bookingDateController.text = DateFormat('yyyy-MM-dd').format(picked);
       });
     }
   }
   
-  String _formatTimeOfDay(TimeOfDay timeOfDay) {
-    final hours = timeOfDay.hour.toString().padLeft(2, '0');
-    final minutes = timeOfDay.minute.toString().padLeft(2, '0');
-    return '$hours:$minutes';
-  }
-  
-  void _calculatePrice() {
-    // Find the selected turf
-    final selectedTurf = _turfs.firstWhere(
-      (turf) => turf.id == _selectedTurfId,
-      orElse: () => Turf(
-        id: 0, 
-        name: '', 
-        basePricePerHour: 0,
-        city: '',
-        address: '',
-      ),
+  Future<void> _selectTime(BuildContext context, TextEditingController controller, {TimeOfDay? initialTime}) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime ?? TimeOfDay.now(),
     );
     
-    if (selectedTurf.id == 0 || _startTime == null || _endTime == null) {
-      return;
+    if (picked != null) {
+      setState(() {
+        controller.text = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      });
     }
-    
-    // Calculate duration in hours
-    final startMinutes = _startTime!.hour * 60 + _startTime!.minute;
-    final endMinutes = _endTime!.hour * 60 + _endTime!.minute;
-    
-    // Handle cases where end time is on the next day
-    final durationMinutes = endMinutes > startMinutes 
-        ? endMinutes - startMinutes
-        : (24 * 60 - startMinutes) + endMinutes;
-    
-    final durationHours = durationMinutes / 60;
-    
-    // Calculate price
-    final price = selectedTurf.basePricePerHour * durationHours;
-    
-    setState(() {
-      _priceController.text = price.toStringAsFixed(2);
-    });
   }
   
   Future<void> _createBooking() async {
@@ -220,20 +130,26 @@ class _OwnerCreateBookingScreenState extends State<OwnerCreateBookingScreen> {
       return;
     }
     
+    if (_selectedTurf == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a turf')),
+      );
+      return;
+    }
+    
     setState(() {
       _isSubmitting = true;
-      _errorMessage = null;
     });
     
     try {
       final bookingData = {
-        'turf_id': _selectedTurfId,
+        'turf_id': _selectedTurf!.id,
         'customer_name': _customerNameController.text,
         'customer_phone': _customerPhoneController.text,
-        'booking_date': _dateController.text,
+        'booking_date': _bookingDateController.text,
         'start_time': _startTimeController.text,
         'end_time': _endTimeController.text,
-        'total_price': double.parse(_priceController.text),
+        'total_price': double.parse(_totalPriceController.text),
         'payment_method': _paymentMethod,
         'notes': _notesController.text,
       };
@@ -245,244 +161,425 @@ class _OwnerCreateBookingScreenState extends State<OwnerCreateBookingScreen> {
       });
       
       if (result['success']) {
-        // Show success message and navigate back
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Booking created successfully'),
-            backgroundColor: AppTheme.successColor,
-          ),
+          SnackBar(content: Text(result['message'] ?? 'Booking created successfully')),
         );
-        Navigator.pop(context, true);
+        
+        // Show success dialog
+        _showSuccessDialog(result['booking']);
       } else {
-        setState(() {
-          _errorMessage = result['message'] ?? 'Failed to create booking';
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Failed to create booking')),
+        );
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error: $e';
         _isSubmitting = false;
       });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
+  }
+  
+  void _showSuccessDialog(Map<String, dynamic> booking) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Booking Created'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Booking for ${booking['turf_name']} created successfully'),
+            const SizedBox(height: 8),
+            Text('Date: ${booking['booking_date']}'),
+            Text('Time: ${booking['time_slot']}'),
+            Text('Customer: ${booking['customer_name']}'),
+            Text('Payment: ${booking['payment_method'] == 'pay_on_arrival' ? 'Pay on Arrival' : 'Paid Online'}'),
+            Text('Amount: \$${booking['total_price']}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Return to previous screen
+            },
+            child: const Text('Done'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Clear form to create another booking
+              _resetForm();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Create Another'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _resetForm() {
+    _customerNameController.clear();
+    _customerPhoneController.clear();
+    _startTimeController.clear();
+    _endTimeController.clear();
+    _notesController.clear();
+    
+    // Reset to default values
+    _bookingDateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (_selectedTurf != null) {
+      _totalPriceController.text = _selectedTurf!.basePricePerHour.toString();
+    }
+    _paymentMethod = 'pay_on_arrival';
+    
+    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Create Direct Booking'),
-        elevation: 0,
+        title: const Text('Create Direct Booking'),
       ),
       body: _isLoading 
-          ? Center(child: LoadingIndicator())
-          : _buildForm(),
+          ? const Center(child: LoadingIndicator(message: 'Loading turfs...'))
+          : _errorMessage != null
+              ? _buildErrorView()
+              : _buildForm(),
+    );
+  }
+  
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.red,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            CustomButton(
+              text: 'Retry',
+              onPressed: _loadOwnerTurfs,
+              color: AppTheme.primaryColor,
+            ),
+          ],
+        ),
+      ),
     );
   }
   
   Widget _buildForm() {
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_errorMessage != null)
-              Container(
-                padding: EdgeInsets.all(12),
-                margin: EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (_ownerTurfs.isEmpty)
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
                 child: Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Colors.red.shade800),
+                  'You don\'t have any turfs. Please add a turf first.',
+                  style: TextStyle(fontSize: 16),
                 ),
               ),
-              
-            // Turf selection dropdown
-            DropdownButtonFormField<int>(
-              decoration: InputDecoration(
-                labelText: 'Select Turf',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.sports_soccer),
+            )
+          else
+            ...[
+              _buildTurfSelector(),
+              const SizedBox(height: 20),
+              _buildCustomerSection(),
+              const SizedBox(height: 20),
+              _buildBookingDetailsSection(),
+              const SizedBox(height: 20),
+              _buildPaymentSection(),
+              const SizedBox(height: 20),
+              CustomButton(
+                text: 'Create Booking',
+                onPressed: _createBooking,
+                isLoading: _isSubmitting,
+                color: AppTheme.primaryColor,
+                icon: Icons.check_circle,
+                width: double.infinity,
               ),
-              value: _selectedTurfId,
-              validator: (value) => value == null ? 'Please select a turf' : null,
-              items: _turfs.map((turf) {
-                return DropdownMenuItem(
-                  value: turf.id,
+            ],
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildTurfSelector() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Select Turf',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<Turf>(
+              decoration: const InputDecoration(
+                labelText: 'Turf',
+                border: OutlineInputBorder(),
+              ),
+              value: _selectedTurf,
+              items: _ownerTurfs.map((turf) {
+                return DropdownMenuItem<Turf>(
+                  value: turf,
                   child: Text(turf.name),
                 );
               }).toList(),
-              onChanged: (value) {
+              onChanged: (Turf? value) {
                 setState(() {
-                  _selectedTurfId = value;
-                  // Recalculate price if times are set
-                  if (_startTime != null && _endTime != null) {
-                    _calculatePrice();
+                  _selectedTurf = value;
+                  if (_selectedTurf != null) {
+                    _totalPriceController.text = _selectedTurf!.basePricePerHour.toString();
                   }
                 });
               },
+              validator: (value) {
+                if (value == null) {
+                  return 'Please select a turf';
+                }
+                return null;
+              },
             ),
-            SizedBox(height: 16),
-            
-            // Customer information
+            if (_selectedTurf != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Location: ${_selectedTurf!.address}, ${_selectedTurf!.city}',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              Text(
+                'Base Price: \$${_selectedTurf!.basePricePerHour}/hour',
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCustomerSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Customer Information',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
             CustomTextField(
               controller: _customerNameController,
               label: 'Customer Name',
               prefixIcon: Icons.person,
-              validator: (value) => value!.isEmpty ? 'Please enter customer name' : null,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter customer name';
+                }
+                return null;
+              },
             ),
-            SizedBox(height: 16),
-            
+            const SizedBox(height: 16),
             CustomTextField(
               controller: _customerPhoneController,
               label: 'Customer Phone',
               prefixIcon: Icons.phone,
               keyboardType: TextInputType.phone,
-              validator: (value) => value!.isEmpty ? 'Please enter customer phone' : null,
-            ),
-            SizedBox(height: 16),
-            
-            // Date and time
-            GestureDetector(
-              onTap: () => _selectDate(context),
-              child: AbsorbPointer(
-                child: CustomTextField(
-                  controller: _dateController,
-                  label: 'Booking Date',
-                  prefixIcon: Icons.calendar_today,
-                  validator: (value) => value!.isEmpty ? 'Please select a date' : null,
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-            
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectTime(context, true),
-                    child: AbsorbPointer(
-                      child: CustomTextField(
-                        controller: _startTimeController,
-                        label: 'Start Time',
-                        prefixIcon: Icons.access_time,
-                        validator: (value) => value!.isEmpty ? 'Required' : null,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectTime(context, false),
-                    child: AbsorbPointer(
-                      child: CustomTextField(
-                        controller: _endTimeController,
-                        label: 'End Time',
-                        prefixIcon: Icons.access_time,
-                        validator: (value) => value!.isEmpty ? 'Required' : null,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            
-            // Price
-            CustomTextField(
-              controller: _priceController,
-              label: 'Total Price',
-              prefixIcon: Icons.attach_money,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                FilteringTextInputFormatter.digitsOnly,
               ],
               validator: (value) {
-                if (value!.isEmpty) {
-                  return 'Please enter a price';
+                if (value == null || value.isEmpty) {
+                  return 'Please enter customer phone';
                 }
-                if (double.tryParse(value) == null) {
-                  return 'Please enter a valid number';
-                }
-                if (double.parse(value) <= 0) {
-                  return 'Price must be greater than zero';
+                if (value.length < 10) {
+                  return 'Please enter a valid phone number';
                 }
                 return null;
               },
             ),
-            SizedBox(height: 16),
-            
-            // Payment method
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Payment Method',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 16,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: Text('Pay on Arrival'),
-                          value: 'pay_on_arrival',
-                          groupValue: _paymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _paymentMethod = value!;
-                            });
-                          },
-                        ),
-                      ),
-                      Expanded(
-                        child: RadioListTile<String>(
-                          title: Text('Already Paid'),
-                          value: 'already_paid',
-                          groupValue: _paymentMethod,
-                          onChanged: (value) {
-                            setState(() {
-                              _paymentMethod = value!;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildBookingDetailsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Booking Details',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 16),
-            
-            // Notes
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _bookingDateController,
+              label: 'Booking Date',
+              prefixIcon: Icons.calendar_today,
+              readOnly: true,
+              onTap: () => _selectDate(context),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please select booking date';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextField(
+                    controller: _startTimeController,
+                    label: 'Start Time',
+                    prefixIcon: Icons.access_time,
+                    readOnly: true,
+                    onTap: () => _selectTime(context, _startTimeController),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select start time';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _endTimeController,
+                    label: 'End Time',
+                    prefixIcon: Icons.access_time,
+                    readOnly: true,
+                    onTap: () {
+                      // Use start time as initial time if set
+                      TimeOfDay? initialTime;
+                      if (_startTimeController.text.isNotEmpty) {
+                        final parts = _startTimeController.text.split(':');
+                        initialTime = TimeOfDay(
+                          hour: int.parse(parts[0]),
+                          minute: int.parse(parts[1]),
+                        );
+                      }
+                      _selectTime(context, _endTimeController, initialTime: initialTime);
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select end time';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _totalPriceController,
+              label: 'Total Price (\$)',
+              prefixIcon: Icons.attach_money,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+              ],
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter total price';
+                }
+                if (double.tryParse(value) == null) {
+                  return 'Please enter a valid price';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
             CustomTextField(
               controller: _notesController,
               label: 'Notes (Optional)',
               prefixIcon: Icons.note,
               maxLines: 3,
+              minLines: 1,
             ),
-            SizedBox(height: 24),
-            
-            // Submit button
-            CustomButton(
-              text: 'Create Booking',
-              isLoading: _isSubmitting,
-              onPressed: _createBooking,
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildPaymentSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Payment Method',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            RadioListTile<String>(
+              title: const Text('Pay on Arrival'),
+              value: 'pay_on_arrival',
+              groupValue: _paymentMethod,
+              onChanged: (value) {
+                setState(() {
+                  _paymentMethod = value!;
+                });
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Already Paid (Cash/Transfer)'),
+              value: 'paid_offline',
+              groupValue: _paymentMethod,
+              onChanged: (value) {
+                setState(() {
+                  _paymentMethod = value!;
+                });
+              },
             ),
           ],
         ),

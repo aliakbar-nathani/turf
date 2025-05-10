@@ -890,21 +890,29 @@ def get_owner_turfs(current_user):
                 status=BookingStatus.NEGOTIATING
             ).count()
             
+            # Get average rating
+            avg_rating = db.session.query(db.func.avg(Review.rating)).filter(
+                Review.turf_id == turf.id
+            ).scalar() or 0
+            
+            # Get review count
+            review_count = Review.query.filter_by(turf_id=turf.id).count()
+            
             # Build turf data
             turf_data = {
                 'id': turf.id,
                 'name': turf.name,
                 'address': turf.address,
                 'city': turf.city,
-                'base_price_per_hour': turf.base_price_per_hour,
+                'base_price_per_hour': float(turf.base_price_per_hour),
                 'indoor': turf.indoor,
-                'rating': turf.get_average_rating(),
-                'review_count': turf.get_rating_count(),
+                'rating': float(avg_rating),
+                'review_count': review_count,
                 'total_bookings': total_bookings,
                 'pending_bookings': pending_bookings,
                 'active_negotiations': negotiations,
-                'image': primary_image.url if primary_image else None,
-                'created_at': turf.created_at.strftime('%Y-%m-%d')
+                'image': primary_image.image_url if primary_image and hasattr(primary_image, 'image_url') else None,
+                'created_at': turf.created_at.strftime('%Y-%m-%d') if hasattr(turf, 'created_at') and turf.created_at else None
             }
             turfs_data.append(turf_data)
         

@@ -8,6 +8,53 @@ class TurfService {
   final String baseUrl = ApiConfig.baseUrl;
   final AuthService _authService = AuthService();
   
+  // Get owner turfs
+  Future<Map<String, dynamic>> getOwnerTurfs() async {
+    try {
+      final token = await _authService.getToken();
+      
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Not authenticated',
+        };
+      }
+      
+      final response = await http.get(
+        Uri.parse('$baseUrl/owner/turfs'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        
+        // Parse turfs from response
+        final List<dynamic> turfsJson = responseData['turfs'];
+        final List<Turf> turfs = turfsJson.map((turfJson) => Turf.fromJson(turfJson)).toList();
+        
+        return {
+          'success': true,
+          'turfs': turfs,
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to fetch owner turfs',
+        };
+      }
+    } catch (e) {
+      print('Error fetching owner turfs: $e');
+      return {
+        'success': false,
+        'message': 'Error: $e',
+      };
+    }
+  }
+  
   // Get all turfs with optional filters
   Future<Map<String, dynamic>> getTurfs({
     int page = 1,
