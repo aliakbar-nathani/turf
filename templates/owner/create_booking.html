@@ -1,0 +1,263 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .form-section {
+        background-color: var(--bs-gray-100);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h4 {
+        margin-bottom: 1.25rem;
+        color: var(--bs-primary);
+        font-weight: 600;
+    }
+    .time-slot-field {
+        display: flex;
+        align-items: center;
+    }
+    .price-field {
+        position: relative;
+    }
+    .price-field .form-control {
+        padding-left: 1.5rem;
+    }
+    .price-field:before {
+        content: "₹";
+        position: absolute;
+        left: 0.75rem;
+        top: 0.5rem;
+        z-index: 10;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-3">Create Direct Booking</h1>
+            <p class="lead">Use this form to create a booking for walk-in customers or phone reservations.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('owner.dashboard') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card">
+                <div class="card-body">
+                    {% if not form.turf_id.choices %}
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>No Turfs Available</h5>
+                            <p class="mb-0">You don't have any turfs yet. Please add a turf first.</p>
+                            <a href="{{ url_for('owner.new_turf') }}" class="btn btn-primary mt-3">
+                                <i class="fas fa-plus-circle me-2"></i>Add New Turf
+                            </a>
+                        </div>
+                    {% else %}
+                        <form method="POST" id="bookingForm">
+                            {{ form.hidden_tag() }}
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-map-marker-alt me-2"></i>Turf Selection</h4>
+                                <div class="mb-3">
+                                    {{ form.turf_id.label(class="form-label") }}
+                                    {{ form.turf_id(class="form-select") }}
+                                    {% if form.turf_id.errors %}
+                                        {% for error in form.turf_id.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-user me-2"></i>Customer Information</h4>
+                                <div class="mb-3">
+                                    {{ form.customer_name.label(class="form-label") }}
+                                    {{ form.customer_name(class="form-control", placeholder="Enter customer's full name") }}
+                                    {% if form.customer_name.errors %}
+                                        {% for error in form.customer_name.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.customer_phone.label(class="form-label") }}
+                                    {{ form.customer_phone(class="form-control", placeholder="Enter customer's phone number") }}
+                                    {% if form.customer_phone.errors %}
+                                        {% for error in form.customer_phone.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                    <small class="form-text text-muted">
+                                        If this customer already has an account, we'll link this booking to their existing account.
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-calendar-alt me-2"></i>Booking Details</h4>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.booking_date.label(class="form-label") }}
+                                        {{ form.booking_date(class="form-control date-picker", placeholder="Select date") }}
+                                        {% if form.booking_date.errors %}
+                                            {% for error in form.booking_date.errors %}
+                                                <div class="text-danger">{{ error }}</div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        {{ form.time_slot.label(class="form-label") }}
+                                        {{ form.time_slot(class="form-select") }}
+                                        {% if form.time_slot.errors %}
+                                            {% for error in form.time_slot.errors %}
+                                                <div class="text-danger">{{ error }}</div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="mb-3 price-field">
+                                    {{ form.total_price.label(class="form-label") }}
+                                    {{ form.total_price(class="form-control", placeholder="Enter booking price") }}
+                                    {% if form.total_price.errors %}
+                                        {% for error in form.total_price.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="form-section">
+                                <h4><i class="fas fa-credit-card me-2"></i>Payment Details</h4>
+                                <div class="mb-3">
+                                    {{ form.payment_method.label(class="form-label") }}
+                                    {{ form.payment_method(class="form-select") }}
+                                    {% if form.payment_method.errors %}
+                                        {% for error in form.payment_method.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control", rows="3", placeholder="Any special requests or notes about this booking") }}
+                                    {% if form.notes.errors %}
+                                        {% for error in form.notes.errors %}
+                                            <div class="text-danger">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                {{ form.submit(class="btn btn-primary btn-lg") }}
+                            </div>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About Direct Bookings</h5>
+                </div>
+                <div class="card-body">
+                    <p>Direct bookings allow you to create bookings for customers who:</p>
+                    <ul>
+                        <li>Call you on the phone</li>
+                        <li>Walk in to your facility</li>
+                        <li>Don't have access to the app</li>
+                    </ul>
+                    <p class="mb-0">These bookings are automatically confirmed and will appear in your booking calendar.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Need Help?</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6><i class="fas fa-phone-alt text-primary me-2"></i>Customer Phone</h6>
+                        <p class="small">Enter the customer's phone number with country code (e.g. +919876543210).</p>
+                    </div>
+                    <div class="mb-3">
+                        <h6><i class="fas fa-money-bill-wave text-primary me-2"></i>Payment Status</h6>
+                        <p class="small">Mark as "Already Paid" if you've collected payment offline. Otherwise, select "Pay on Arrival".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date picker
+        flatpickr('.date-picker', {
+            dateFormat: 'Y-m-d',
+            minDate: 'today',
+            disableMobile: true
+        });
+
+        // Handle turf selection change - update time slots
+        const turfSelect = document.getElementById('turf_id');
+        if (turfSelect) {
+            turfSelect.addEventListener('change', function() {
+                const turfId = this.value;
+                
+                // Fetch time slots for selected turf
+                fetch(`/owner/get-time-slots/${turfId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const timeSlotSelect = document.getElementById('time_slot');
+                        timeSlotSelect.innerHTML = '';
+                        
+                        if (data.slots && data.slots.length > 0) {
+                            data.slots.forEach(slot => {
+                                const option = document.createElement('option');
+                                option.value = slot.value;
+                                option.textContent = slot.text;
+                                timeSlotSelect.appendChild(option);
+                            });
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.textContent = 'No time slots available';
+                            timeSlotSelect.appendChild(option);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching time slots:', error);
+                    });
+            });
+        }
+    });
+</script>
+{% endblock %}

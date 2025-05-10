@@ -214,3 +214,17 @@ class ShareTurfForm(FlaskForm):
         ('email', 'Email')
     ])
     submit = SubmitField('Share')
+    
+class DirectBookingForm(FlaskForm):
+    turf_id = SelectField('Select Turf', coerce=int, validators=[DataRequired()])
+    customer_name = StringField('Customer Name', validators=[DataRequired(), Length(min=3, max=50)])
+    customer_phone = StringField('Customer Phone', validators=[DataRequired(), Length(min=10, max=15)])
+    booking_date = StringField('Booking Date', validators=[DataRequired()])
+    time_slot = SelectField('Time Slot', validators=[DataRequired()], coerce=str)
+    total_price = FloatField('Price', validators=[DataRequired(), NumberRange(min=0)])
+    payment_method = SelectField('Payment Method', choices=[
+        ('pay_on_arrival', 'Pay On Arrival'),
+        ('paid_offline', 'Already Paid (Offline)')
+    ], validators=[DataRequired()])
+    notes = TextAreaField('Notes (Optional)', validators=[Optional(), Length(max=500)])
+    submit = SubmitField('Create Booking')

@@ -5,7 +5,7 @@ import json
 
 from app import db
 from models import User, Turf, TurfImage, TimeSlot, Booking, BookingStatus, Negotiation
-from forms import TurfForm, TimeSlotForm
+from forms import TurfForm, TimeSlotForm, DirectBookingForm
 
 owner = Blueprint('owner', __name__)
 
