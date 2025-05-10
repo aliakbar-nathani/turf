@@ -238,6 +238,7 @@ class Booking(db.Model):
     payment_status = db.Column(db.String(20), nullable=False, default='unpaid')
     payment_method = db.Column(db.String(20), nullable=False, default='pay_online')  # 'pay_online' or 'pay_on_arrival'
     payment_id = db.Column(db.String(100), nullable=True)  # External payment reference
+    notes = db.Column(db.Text, nullable=True)  # Additional notes for the booking
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
