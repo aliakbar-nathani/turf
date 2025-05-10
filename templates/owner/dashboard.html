@@ -175,6 +175,9 @@
                         <a href="{{ url_for('owner.bookings', status='pending') }}" class="btn btn-warning">
                             <i class="fas fa-hourglass-half me-2"></i> Manage Pending Bookings
                         </a>
+                        <a href="{{ url_for('owner_direct_booking.create_booking') }}" class="btn btn-success">
+                            <i class="fas fa-calendar-plus me-2"></i> Create Direct Booking
+                        </a>
                         <a href="{{ url_for('owner.analytics') }}" class="btn btn-info">
                             <i class="fas fa-chart-bar me-2"></i> View Analytics
                         </a>

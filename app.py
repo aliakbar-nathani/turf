@@ -104,6 +104,7 @@ with app.app_context():
     from routes.favorites import favorites
     from routes.notifications import notifications
     from routes.mobile_api import mobile_api
+    from routes.owner_direct_booking import owner_direct_booking
     
     # Register blueprints
     app.register_blueprint(auth, url_prefix='/auth')
@@ -116,6 +117,7 @@ with app.app_context():
     app.register_blueprint(favorites)  
     app.register_blueprint(notifications)
     app.register_blueprint(home)
+    app.register_blueprint(owner_direct_booking, url_prefix='/owner')
     
     # Register mobile API blueprint with CSRF exemption
     csrf.exempt(mobile_api)
