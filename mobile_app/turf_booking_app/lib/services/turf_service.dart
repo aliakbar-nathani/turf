@@ -2,69 +2,51 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/turf_model.dart';
+import '../services/auth_service.dart';
 
 class TurfService {
-  final String? authToken;
   final String baseUrl = ApiConfig.baseUrl;
-
-  TurfService({this.authToken});
-
-  // Get all turfs with optional filtering
+  final AuthService _authService = AuthService();
+  
+  // Get all turfs with optional filters
   Future<Map<String, dynamic>> getTurfs({
+    int page = 1,
+    int limit = 10,
     String? city,
-    String? date,
-    double? minPrice,
-    double? maxPrice,
     bool? indoor,
-    String? surfaceType,
-    int? minRating,
-    bool? hasParking,
-    bool? hasChangingRoom,
-    bool? hasShower,
-    bool? hasFloodlights,
-    bool? hasEquipment,
   }) async {
     try {
       // Build query parameters
-      final queryParams = <String, String>{};
-      if (city != null && city.isNotEmpty) queryParams['city'] = city;
-      if (date != null && date.isNotEmpty) queryParams['date'] = date;
-      if (minPrice != null) queryParams['min_price'] = minPrice.toString();
-      if (maxPrice != null) queryParams['max_price'] = maxPrice.toString();
-      if (indoor != null) queryParams['indoor'] = indoor.toString();
-      if (surfaceType != null && surfaceType.isNotEmpty) {
-        queryParams['surface_type'] = surfaceType;
+      final queryParams = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      
+      if (city != null && city.isNotEmpty) {
+        queryParams['city'] = city;
       }
-      if (minRating != null) queryParams['min_rating'] = minRating.toString();
-      if (hasParking != null) queryParams['has_parking'] = hasParking.toString();
-      if (hasChangingRoom != null) {
-        queryParams['has_changing_room'] = hasChangingRoom.toString();
+      
+      if (indoor != null) {
+        queryParams['indoor'] = indoor.toString();
       }
-      if (hasShower != null) queryParams['has_shower'] = hasShower.toString();
-      if (hasFloodlights != null) {
-        queryParams['has_floodlights'] = hasFloodlights.toString();
-      }
-      if (hasEquipment != null) {
-        queryParams['has_equipment'] = hasEquipment.toString();
-      }
-
-      final uri = Uri.parse('$baseUrl/api/turfs')
-          .replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: _getHeaders(),
-      );
-
+      
+      // Make API request
+      final uri = Uri.parse('$baseUrl/turfs').replace(queryParameters: queryParams);
+      final response = await http.get(uri);
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final turfsJson = responseData['turfs'] as List;
-        final turfs = turfsJson.map((json) => Turf.fromJson(json)).toList();
-
+        
+        // Parse turfs from response
+        final List<dynamic> turfsJson = responseData['turfs'];
+        final List<Turf> turfs = turfsJson.map((turfJson) => Turf.fromJson(turfJson)).toList();
+        
         return {
           'success': true,
           'turfs': turfs,
-          'total': responseData['total'],
+          'current_page': responseData['current_page'],
+          'total_pages': responseData['total_pages'],
+          'total_turfs': responseData['total_turfs'],
         };
       } else {
         final errorData = jsonDecode(response.body);
@@ -81,22 +63,83 @@ class TurfService {
       };
     }
   }
-
-  // Get a specific turf by ID
-  Future<Map<String, dynamic>> getTurfById(int turfId) async {
+  
+  // Search for turfs
+  Future<Map<String, dynamic>> searchTurfs({
+    String? city,
+    String? date,
+    double? minPrice,
+    double? maxPrice,
+    bool? indoor,
+  }) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/turfs/$turfId'),
-        headers: _getHeaders(),
-      );
-
+      // Build query parameters
+      final queryParams = <String, String>{};
+      
+      if (city != null && city.isNotEmpty) {
+        queryParams['city'] = city;
+      }
+      
+      if (date != null && date.isNotEmpty) {
+        queryParams['date'] = date;
+      }
+      
+      if (minPrice != null) {
+        queryParams['min_price'] = minPrice.toString();
+      }
+      
+      if (maxPrice != null) {
+        queryParams['max_price'] = maxPrice.toString();
+      }
+      
+      if (indoor != null) {
+        queryParams['indoor'] = indoor.toString();
+      }
+      
+      // Make API request
+      final uri = Uri.parse('$baseUrl/search').replace(queryParameters: queryParams);
+      final response = await http.get(uri);
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final turf = Turf.fromJson(responseData['turf']);
-
+        
+        // Parse turfs from response
+        final List<dynamic> turfsJson = responseData['turfs'];
+        final List<Turf> turfs = turfsJson.map((turfJson) => Turf.fromJson(turfJson)).toList();
+        
         return {
           'success': true,
-          'turf': turf,
+          'turfs': turfs,
+          'count': responseData['count'],
+        };
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {
+          'success': false,
+          'message': errorData['message'] ?? 'Failed to search turfs',
+        };
+      }
+    } catch (e) {
+      print('Error searching turfs: $e');
+      return {
+        'success': false,
+        'message': 'Error: $e',
+      };
+    }
+  }
+  
+  // Get turf details
+  Future<Map<String, dynamic>> getTurfDetails(int turfId) async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/turf/$turfId'));
+      
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final turfData = responseData['turf'];
+        
+        return {
+          'success': true,
+          'turf': Turf.fromDetailJson(turfData),
         };
       } else {
         final errorData = jsonDecode(response.body);
@@ -113,25 +156,23 @@ class TurfService {
       };
     }
   }
-
-  // Get available time slots for a specific turf on a specific date
-  Future<Map<String, dynamic>> getAvailableTimeSlots(
-      int turfId, String date) async {
+  
+  // Get available time slots for a turf on a specific date
+  Future<Map<String, dynamic>> getTurfTimeSlots(int turfId, String date) async {
     try {
-      final queryParams = {'date': date};
-      final uri = Uri.parse('$baseUrl/api/turfs/$turfId/time-slots')
-          .replace(queryParameters: queryParams);
-
       final response = await http.get(
-        uri,
-        headers: _getHeaders(),
+        Uri.parse('$baseUrl/turf/$turfId/time_slots').replace(
+          queryParameters: {'date': date},
+        ),
       );
-
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        
         return {
           'success': true,
-          'timeSlots': responseData['time_slots'],
+          'time_slots': responseData['time_slots'],
+          'is_available': responseData['is_available'],
         };
       } else {
         final errorData = jsonDecode(response.body);
@@ -148,21 +189,21 @@ class TurfService {
       };
     }
   }
-
-  // Get reviews for a specific turf
+  
+  // Get reviews for a turf
   Future<Map<String, dynamic>> getTurfReviews(int turfId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/turfs/$turfId/reviews'),
-        headers: _getHeaders(),
-      );
-
+      final response = await http.get(Uri.parse('$baseUrl/turf/$turfId/reviews'));
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        
         return {
           'success': true,
+          'turf_name': responseData['turf_name'],
           'reviews': responseData['reviews'],
-          'average_rating': responseData['average_rating'],
+          'avg_rating': responseData['avg_rating'],
+          'review_count': responseData['review_count'],
         };
       } else {
         final errorData = jsonDecode(response.body);
@@ -179,70 +220,34 @@ class TurfService {
       };
     }
   }
-
-  // Submit a review for a turf
-  Future<Map<String, dynamic>> submitReview(
-      {required int turfId, required int rating, String? comment}) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/turfs/$turfId/reviews'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'rating': rating,
-          'comment': comment,
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Review submitted successfully',
-          'review': responseData['review'],
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to submit review',
-        };
-      }
-    } catch (e) {
-      print('Error submitting review: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Get turfs owned by the authenticated user
+  
+  // Owner-specific: Get turfs owned by the current user
   Future<Map<String, dynamic>> getOwnerTurfs() async {
     try {
-      if (authToken == null) {
+      final token = await _authService.getToken();
+      
+      if (token == null) {
         return {
           'success': false,
-          'message': 'Authentication required',
+          'message': 'Not authenticated',
         };
       }
-
+      
       final response = await http.get(
-        Uri.parse('$baseUrl/api/owner/turfs'),
-        headers: _getHeaders(),
+        Uri.parse('$baseUrl/owner/turfs'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
-
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final turfsJson = responseData['turfs'] as List;
-        final turfs = turfsJson.map((json) => Turf.fromJson(json)).toList();
-
+        
+        // Parse turfs from response
+        final List<dynamic> turfsJson = responseData['turfs'];
+        final List<Turf> turfs = turfsJson.map((turfJson) => Turf.fromOwnerJson(turfJson)).toList();
+        
         return {
           'success': true,
           'turfs': turfs,
@@ -251,7 +256,7 @@ class TurfService {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? 'Failed to fetch your turfs',
+          'message': errorData['message'] ?? 'Failed to fetch owner turfs',
         };
       }
     } catch (e) {
@@ -262,292 +267,56 @@ class TurfService {
       };
     }
   }
-
-  // Create a new turf
-  Future<Map<String, dynamic>> createTurf(Map<String, dynamic> turfData) async {
+  
+  // Owner-specific: Get analytics for owner's turfs
+  Future<Map<String, dynamic>> getOwnerAnalytics({int? turfId}) async {
     try {
-      if (authToken == null) {
+      final token = await _authService.getToken();
+      
+      if (token == null) {
         return {
           'success': false,
-          'message': 'Authentication required',
+          'message': 'Not authenticated',
         };
       }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/owner/turfs'),
-        headers: _getHeaders(),
-        body: jsonEncode(turfData),
-      );
-
-      if (response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        final turf = Turf.fromJson(responseData['turf']);
-
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Turf created successfully',
-          'turf': turf,
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to create turf',
-        };
+      
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (turfId != null) {
+        queryParams['turf_id'] = turfId.toString();
       }
-    } catch (e) {
-      print('Error creating turf: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Update an existing turf
-  Future<Map<String, dynamic>> updateTurf(
-      int turfId, Map<String, dynamic> turfData) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/owner/turfs/$turfId'),
-        headers: _getHeaders(),
-        body: jsonEncode(turfData),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final turf = Turf.fromJson(responseData['turf']);
-
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Turf updated successfully',
-          'turf': turf,
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to update turf',
-        };
-      }
-    } catch (e) {
-      print('Error updating turf: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Delete a turf
-  Future<Map<String, dynamic>> deleteTurf(int turfId) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final response = await http.delete(
-        Uri.parse('$baseUrl/api/owner/turfs/$turfId'),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Turf deleted successfully',
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to delete turf',
-        };
-      }
-    } catch (e) {
-      print('Error deleting turf: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Get time slots for a specific turf (owner view - includes all slots)
-  Future<Map<String, dynamic>> getTurfTimeSlots(int turfId) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
+      
+      final uri = Uri.parse('$baseUrl/owner/analytics').replace(queryParameters: queryParams);
       final response = await http.get(
-        Uri.parse('$baseUrl/api/owner/turfs/$turfId/time-slots'),
-        headers: _getHeaders(),
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
-
+      
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        
         return {
           'success': true,
-          'timeSlots': responseData['time_slots'],
+          'turf': responseData['turf'],
+          'turfs': responseData['turfs'],
+          'analytics': responseData['analytics'],
         };
       } else {
         final errorData = jsonDecode(response.body);
         return {
           'success': false,
-          'message': errorData['message'] ?? 'Failed to fetch time slots',
+          'message': errorData['message'] ?? 'Failed to fetch analytics',
         };
       }
     } catch (e) {
-      print('Error fetching time slots: $e');
+      print('Error fetching owner analytics: $e');
       return {
         'success': false,
         'message': 'Error: $e',
       };
     }
-  }
-
-  // Add a new time slot to a turf
-  Future<Map<String, dynamic>> addTimeSlot(
-      int turfId, Map<String, dynamic> timeSlotData) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/owner/turfs/$turfId/time-slots'),
-        headers: _getHeaders(),
-        body: jsonEncode(timeSlotData),
-      );
-
-      if (response.statusCode == 201) {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Time slot added successfully',
-          'timeSlot': responseData['time_slot'],
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to add time slot',
-        };
-      }
-    } catch (e) {
-      print('Error adding time slot: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Delete a time slot
-  Future<Map<String, dynamic>> deleteTimeSlot(
-      int turfId, int timeSlotId) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final response = await http.delete(
-        Uri.parse('$baseUrl/api/owner/turfs/$turfId/time-slots/$timeSlotId'),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Time slot deleted successfully',
-        };
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to delete time slot',
-        };
-      }
-    } catch (e) {
-      print('Error deleting time slot: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  // Respond to a review (owner only)
-  Future<Map<String, dynamic>> respondToReview(
-      int reviewId, String response) async {
-    try {
-      if (authToken == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
-      }
-
-      final apiResponse = await http.post(
-        Uri.parse('$baseUrl/api/owner/reviews/$reviewId/respond'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'response': response,
-        }),
-      );
-
-      if (apiResponse.statusCode == 200) {
-        final responseData = jsonDecode(apiResponse.body);
-        return {
-          'success': true,
-          'message': responseData['message'] ?? 'Response added successfully',
-        };
-      } else {
-        final errorData = jsonDecode(apiResponse.body);
-        return {
-          'success': false,
-          'message': errorData['message'] ?? 'Failed to respond to review',
-        };
-      }
-    } catch (e) {
-      print('Error responding to review: $e');
-      return {
-        'success': false,
-        'message': 'Error: $e',
-      };
-    }
-  }
-
-  Map<String, String> _getHeaders() {
-    final headers = {
-      'Content-Type': 'application/json',
-    };
-
-    if (authToken != null) {
-      headers['Authorization'] = 'Bearer $authToken';
-    }
-
-    return headers;
   }
 }

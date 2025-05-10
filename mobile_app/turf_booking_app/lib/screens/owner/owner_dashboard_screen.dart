@@ -8,6 +8,7 @@ import 'owner_analytics_screen.dart';
 import 'owner_turf_list_screen.dart';
 import 'owner_negotiations_screen.dart';
 import 'owner_add_turf_screen.dart';
+import 'owner_create_booking_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -354,6 +355,20 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
           children: [
             Expanded(
               child: _buildActionCard(
+                'Create Booking',
+                Icons.event_available,
+                Colors.teal,
+                () {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(builder: (context) => const OwnerCreateBookingScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
                 'Negotiations',
                 Icons.handshake,
                 Colors.orange,
@@ -365,7 +380,11 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 },
               ),
             ),
-            const SizedBox(width: 12),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
             Expanded(
               child: _buildActionCard(
                 'Analytics',
@@ -379,6 +398,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 },
               ),
             ),
+            const SizedBox(width: 12),
+            // Empty space for alignment
+            const Expanded(child: SizedBox()),
           ],
         ),
       ],

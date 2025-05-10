@@ -4,26 +4,33 @@ class Turf {
   final String? description;
   final String address;
   final String city;
-  final String state;
-  final String country;
-  final String postalCode;
+  final String? state;
+  final String? country;
+  final String? postalCode;
+  final double? latitude;
+  final double? longitude;
   final double basePricePerHour;
   final List<String>? features;
   final String? size;
-  final bool? indoor;
+  final bool indoor;
+  final double? avgRating;
+  final int? reviewCount;
+  final String? surfaceType;
   final bool? hasParking;
   final bool? hasChangingRoom;
   final bool? hasShower;
   final bool? hasFloodlights;
   final bool? hasEquipment;
-  final String? surfaceType;
-  final String? imageUrl;
-  final List<String>? additionalImages;
-  final double? rating;
-  final int? reviewsCount;
-  final int? ownerId;
-  final String createdAt;
-  final String? updatedAt;
+  final bool? hasRefreshments;
+  final String? primaryImage;
+  final List<String>? images;
+  final Map<String, dynamic>? owner;
+  
+  // Owner-specific properties
+  final int? totalBookings;
+  final int? pendingBookings;
+  final int? activeNegotiations;
+  final String? createdAt;
 
   Turf({
     required this.id,
@@ -31,47 +38,60 @@ class Turf {
     this.description,
     required this.address,
     required this.city,
-    required this.state,
-    required this.country,
-    required this.postalCode,
+    this.state,
+    this.country,
+    this.postalCode,
+    this.latitude,
+    this.longitude,
     required this.basePricePerHour,
     this.features,
     this.size,
-    this.indoor,
+    required this.indoor,
+    this.avgRating,
+    this.reviewCount,
+    this.surfaceType,
     this.hasParking,
     this.hasChangingRoom,
     this.hasShower,
     this.hasFloodlights,
     this.hasEquipment,
-    this.surfaceType,
-    this.imageUrl,
-    this.additionalImages,
-    this.rating,
-    this.reviewsCount,
-    this.ownerId,
-    required this.createdAt,
-    this.updatedAt,
+    this.hasRefreshments,
+    this.primaryImage,
+    this.images,
+    this.owner,
+    this.totalBookings,
+    this.pendingBookings,
+    this.activeNegotiations,
+    this.createdAt,
   });
 
+  // Factory method for general turf listings
   factory Turf.fromJson(Map<String, dynamic> json) {
-    List<String>? features;
-    if (json['features'] != null) {
-      if (json['features'] is String) {
-        features = (json['features'] as String).split(',').map((e) => e.trim()).toList();
-      } else if (json['features'] is List) {
-        features = (json['features'] as List).map((e) => e.toString()).toList();
-      }
-    }
+    return Turf(
+      id: json['id'],
+      name: json['name'],
+      address: json['address'],
+      city: json['city'],
+      basePricePerHour: json['base_price_per_hour']?.toDouble() ?? 0.0,
+      features: json['features'] != null 
+          ? List<String>.from(json['features']) 
+          : null,
+      size: json['size'],
+      indoor: json['indoor'] ?? false,
+      avgRating: json['avg_rating']?.toDouble(),
+      reviewCount: json['rating_count'],
+      surfaceType: json['surface_type'],
+      hasParking: json['has_parking'],
+      hasChangingRoom: json['has_changing_room'],
+      hasShower: json['has_shower'],
+      hasFloodlights: json['has_floodlights'],
+      hasEquipment: json['has_equipment'],
+      primaryImage: json['image'],
+    );
+  }
 
-    List<String>? additionalImages;
-    if (json['additional_images'] != null) {
-      if (json['additional_images'] is String) {
-        additionalImages = (json['additional_images'] as String).split(',').map((e) => e.trim()).toList();
-      } else if (json['additional_images'] is List) {
-        additionalImages = (json['additional_images'] as List).map((e) => e.toString()).toList();
-      }
-    }
-
+  // Factory method for detailed turf information
+  factory Turf.fromDetailJson(Map<String, dynamic> json) {
     return Turf(
       id: json['id'],
       name: json['name'],
@@ -81,26 +101,51 @@ class Turf {
       state: json['state'],
       country: json['country'],
       postalCode: json['postal_code'],
-      basePricePerHour: json['base_price_per_hour'].toDouble(),
-      features: features,
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
+      basePricePerHour: json['base_price_per_hour']?.toDouble() ?? 0.0,
+      features: json['features'] != null 
+          ? List<String>.from(json['features']) 
+          : null,
       size: json['size'],
-      indoor: json['indoor'],
+      indoor: json['indoor'] ?? false,
+      avgRating: json['avg_rating']?.toDouble(),
+      reviewCount: json['rating_count'],
+      surfaceType: json['surface_type'],
       hasParking: json['has_parking'],
       hasChangingRoom: json['has_changing_room'],
       hasShower: json['has_shower'],
       hasFloodlights: json['has_floodlights'],
       hasEquipment: json['has_equipment'],
-      surfaceType: json['surface_type'],
-      imageUrl: json['image_url'],
-      additionalImages: additionalImages,
-      rating: json['rating']?.toDouble(),
-      reviewsCount: json['reviews_count'],
-      ownerId: json['owner_id'],
-      createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
+      hasRefreshments: json['has_refreshments'],
+      primaryImage: json['primary_image'],
+      images: json['images'] != null 
+          ? List<String>.from(json['images']) 
+          : null,
+      owner: json['owner'],
     );
   }
 
+  // Factory method for owner turfs
+  factory Turf.fromOwnerJson(Map<String, dynamic> json) {
+    return Turf(
+      id: json['id'],
+      name: json['name'],
+      address: json['address'],
+      city: json['city'],
+      basePricePerHour: json['base_price_per_hour']?.toDouble() ?? 0.0,
+      indoor: json['indoor'] ?? false,
+      avgRating: json['rating']?.toDouble(),
+      reviewCount: json['review_count'],
+      primaryImage: json['image'],
+      totalBookings: json['total_bookings'],
+      pendingBookings: json['pending_bookings'],
+      activeNegotiations: json['active_negotiations'],
+      createdAt: json['created_at'],
+    );
+  }
+
+  // Convert turf to a map for JSON serialization
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -111,23 +156,23 @@ class Turf {
       'state': state,
       'country': country,
       'postal_code': postalCode,
+      'latitude': latitude,
+      'longitude': longitude,
       'base_price_per_hour': basePricePerHour,
-      'features': features?.join(', '),
+      'features': features,
       'size': size,
       'indoor': indoor,
+      'avg_rating': avgRating,
+      'review_count': reviewCount,
+      'surface_type': surfaceType,
       'has_parking': hasParking,
       'has_changing_room': hasChangingRoom,
       'has_shower': hasShower,
       'has_floodlights': hasFloodlights,
       'has_equipment': hasEquipment,
-      'surface_type': surfaceType,
-      'image_url': imageUrl,
-      'additional_images': additionalImages?.join(', '),
-      'rating': rating,
-      'reviews_count': reviewsCount,
-      'owner_id': ownerId,
-      'created_at': createdAt,
-      'updated_at': updatedAt,
+      'has_refreshments': hasRefreshments,
+      'primary_image': primaryImage,
+      'images': images,
     };
   }
 }
