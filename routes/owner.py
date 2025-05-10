@@ -378,6 +378,13 @@ def respond_booking(booking_id):
             
         flash('Payment received offline. Booking has been confirmed!', 'success')
         
+    elif action == 'mark_completed':
+        # Mark booking as completed
+        booking.status = BookingStatus.COMPLETED
+        booking.updated_at = datetime.utcnow()
+        
+        flash('Booking has been marked as completed!', 'success')
+        
     elif action == 'reject':
         # Reject the booking
         booking.status = BookingStatus.CANCELLED
