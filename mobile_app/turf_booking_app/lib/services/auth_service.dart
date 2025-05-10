@@ -17,7 +17,7 @@ class AuthService {
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/auth/login'),
+        Uri.parse('$baseUrl${ApiConfig.loginEndpoint}'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email,
@@ -66,7 +66,7 @@ class AuthService {
     required bool isOwner,
   }) async {
     try {
-      final endpoint = isOwner ? '/auth/register-owner' : '/auth/register';
+      final endpoint = isOwner ? ApiConfig.registerOwnerEndpoint : ApiConfig.registerEndpoint;
       
       final response = await http.post(
         Uri.parse('$baseUrl$endpoint'),

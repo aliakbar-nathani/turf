@@ -1,14 +1,15 @@
+import '../services/auth_service.dart';
+
 class User {
   final int id;
   final String username;
   final String email;
   final String? phoneNumber;
   final String role;
-  final String? profileImageUrl;
-  final String createdAt;
-  final String? updatedAt;
-  final bool isActive;
-  final Map<String, dynamic>? notificationSettings;
+  final String? profileImage;
+  final bool? emailVerified;
+  final String? createdAt;
+  final Map<String, dynamic>? preferences;
 
   User({
     required this.id,
@@ -16,12 +17,30 @@ class User {
     required this.email,
     this.phoneNumber,
     required this.role,
-    this.profileImageUrl,
-    required this.createdAt,
-    this.updatedAt,
-    required this.isActive,
-    this.notificationSettings,
+    this.profileImage,
+    this.emailVerified,
+    this.createdAt,
+    this.preferences,
   });
+
+  UserRole get userRole {
+    switch (role.toLowerCase()) {
+      case 'owner':
+        return UserRole.owner;
+      case 'admin':
+        return UserRole.admin;
+      default:
+        return UserRole.user;
+    }
+  }
+
+  bool isOwner() {
+    return userRole == UserRole.owner;
+  }
+
+  bool isAdmin() {
+    return userRole == UserRole.admin;
+  }
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -29,12 +48,11 @@ class User {
       username: json['username'],
       email: json['email'],
       phoneNumber: json['phone_number'],
-      role: json['role'],
-      profileImageUrl: json['profile_image_url'],
+      role: json['role'] ?? 'user',
+      profileImage: json['profile_image'],
+      emailVerified: json['email_verified'],
       createdAt: json['created_at'],
-      updatedAt: json['updated_at'],
-      isActive: json['is_active'] ?? true,
-      notificationSettings: json['notification_settings'],
+      preferences: json['preferences'],
     );
   }
 
@@ -45,15 +63,10 @@ class User {
       'email': email,
       'phone_number': phoneNumber,
       'role': role,
-      'profile_image_url': profileImageUrl,
+      'profile_image': profileImage,
+      'email_verified': emailVerified,
       'created_at': createdAt,
-      'updated_at': updatedAt,
-      'is_active': isActive,
-      'notification_settings': notificationSettings,
+      'preferences': preferences,
     };
   }
-
-  bool get isOwner => role == 'owner';
-  bool get isAdmin => role == 'admin';
-  bool get isRegularUser => role == 'user';
 }
