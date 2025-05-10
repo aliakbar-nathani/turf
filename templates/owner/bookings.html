@@ -120,6 +120,7 @@
                                                             </div>
                                                             
                                                             <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                                 <div class="mb-3">
                                                                     <div class="form-check mb-2">
                                                                         <input class="form-check-input" type="radio" name="action" id="accept{{ booking.id }}" value="accept" checked>
@@ -194,6 +195,7 @@
                                                             </div>
                                                             
                                                             <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
+                                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                                 <input type="hidden" name="action" value="payment_received_offline">
                                                                 <div class="text-end">
                                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -212,12 +214,14 @@
                                                 <ul class="dropdown-menu">
                                                     <li>
                                                         <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <input type="hidden" name="action" value="mark_completed">
                                                             <button type="submit" class="btn btn-link text-success p-0">Mark as Completed</button>
                                                         </form>
                                                     </li>
                                                     <li>
                                                         <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
+                                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                             <input type="hidden" name="action" value="payment_received_offline">
                                                             <button type="submit" class="btn btn-link text-primary p-0">Confirm Payment</button>
                                                         </form>
