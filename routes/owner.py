@@ -330,15 +330,21 @@ def respond_booking(booking_id):
     if turf.owner_id != current_user.id:
         abort(403)
     
-    # Check if booking is in a negotiable state
-    if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING]:
-        flash('This booking is no longer negotiable.', 'warning')
-        return redirect(url_for('owner.bookings'))
-    
     # Get form data
     action = request.form.get('action')
     counter_price = request.form.get('counter_price')
     message = request.form.get('message', '')
+    
+    # Special case for payment_received_offline and mark_completed actions that can be applied to more statuses
+    if action in ['payment_received_offline', 'mark_completed']:
+        if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING, BookingStatus.PAYMENT_PENDING, BookingStatus.CONFIRMED]:
+            flash('Cannot perform this action for the current booking status.', 'warning')
+            return redirect(url_for('owner.bookings'))
+    else:
+        # For other actions, booking must be in a negotiable state
+        if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING]:
+            flash('This booking is no longer negotiable.', 'warning')
+            return redirect(url_for('owner.bookings'))
     
     if action == 'accept':
         # Accept the booking at current price

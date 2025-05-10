@@ -169,6 +169,65 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        {% elif booking.status == 'payment_pending' %}
+                                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentReceivedModal{{ booking.id }}">
+                                                Confirm Payment
+                                            </button>
+                                            
+                                            <!-- Payment Received Modal -->
+                                            <div class="modal fade" id="paymentReceivedModal{{ booking.id }}" tabindex="-1" aria-labelledby="paymentReceivedModalLabel{{ booking.id }}" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title" id="paymentReceivedModalLabel{{ booking.id }}">Confirm Payment</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Confirm that payment has been received for this booking?</p>
+                                                            <div class="mb-3">
+                                                                <strong>Booking Details:</strong><br>
+                                                                Turf: {{ booking.turf.name }}<br>
+                                                                Date: {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                                                Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}<br>
+                                                                User: {{ booking.user.username }}<br>
+                                                                Amount: ₹{{ booking.total_price }}
+                                                            </div>
+                                                            
+                                                            <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
+                                                                <input type="hidden" name="action" value="payment_received_offline">
+                                                                <div class="text-end">
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="submit" class="btn btn-success">Confirm Payment Received</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% elif booking.status == 'confirmed' %}
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
+                                                            <input type="hidden" name="action" value="mark_completed">
+                                                            <button type="submit" class="btn btn-link text-success p-0">Mark as Completed</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
+                                                            <input type="hidden" name="action" value="payment_received_offline">
+                                                            <button type="submit" class="btn btn-link text-primary p-0">Confirm Payment</button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        {% elif booking.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif booking.status == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
                                         {% else %}
                                             <span class="text-muted">No action needed</span>
                                         {% endif %}
