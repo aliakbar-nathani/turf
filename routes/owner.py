@@ -331,7 +331,7 @@ def respond_booking(booking_id):
         abort(403)
     
     # Check if booking is in a negotiable state
-    if booking.status not in [BookingStatus.PENDING, BookingStatus.NEGOTIATING]:
+    if booking.status not in [BookingStatus.NEGOTIATING]:
         flash('This booking is no longer negotiable.', 'warning')
         return redirect(url_for('owner.bookings'))
     
@@ -356,6 +356,21 @@ def respond_booking(booking_id):
             latest_negotiation.is_accepted = True
             
         flash('You have accepted the booking!', 'success')
+        
+    elif action == 'payment_received_offline':
+        # Mark that payment was received offline
+        booking.status = BookingStatus.CONFIRMED
+        booking.payment_status = 'paid'
+        
+        # Update negotiation if it exists
+        latest_negotiation = Negotiation.query.filter_by(
+            booking_id=booking.id
+        ).order_by(Negotiation.created_at.desc()).first()
+        
+        if latest_negotiation:
+            latest_negotiation.is_accepted = True
+            
+        flash('Payment received offline. Booking has been confirmed!', 'success')
         
     elif action == 'reject':
         # Reject the booking
