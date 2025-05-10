@@ -330,10 +330,24 @@ def respond_booking(booking_id):
     if turf.owner_id != current_user.id:
         abort(403)
     
-    # Get form data
-    action = request.form.get('action')
-    counter_price = request.form.get('counter_price')
-    message = request.form.get('message', '')
+    # Use either BookingActionForm or SimpleBookingActionForm based on the request
+    if 'action' in request.form and request.form['action'] in ['mark_completed', 'payment_received_offline']:
+        form = SimpleBookingActionForm()
+    else:
+        form = BookingActionForm()
+    
+    if not form.validate_on_submit():
+        flash('There was an error with the form submission.', 'danger')
+        return redirect(url_for('owner.bookings'))
+    
+    action = form.action.data
+    
+    # Get additional form data if using BookingActionForm
+    counter_price = None
+    message = ''
+    if isinstance(form, BookingActionForm):
+        counter_price = form.counter_price.data
+        message = form.message.data or ''
     
     # Special case for payment_received_offline and mark_completed actions that can be applied to more statuses
     if action in ['payment_received_offline', 'mark_completed']:

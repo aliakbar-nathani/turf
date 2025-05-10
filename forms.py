@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, FloatField, IntegerField, HiddenField, TimeField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, SelectField, FloatField, IntegerField, HiddenField, TimeField, RadioField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional, NumberRange
 from datetime import date
 
@@ -228,3 +228,22 @@ class DirectBookingForm(FlaskForm):
     ], validators=[DataRequired()])
     notes = TextAreaField('Notes (Optional)', validators=[Optional(), Length(max=500)])
     submit = SubmitField('Create Booking')
+
+# Form for booking actions (accept, reject, etc.)
+class BookingActionForm(FlaskForm):
+    action = RadioField('Action', choices=[
+        ('accept', 'Accept Booking'),
+        ('payment_received_offline', 'Payment Received Offline'),
+        ('reject', 'Reject Booking'),
+        ('counter', 'Make Counter Offer')
+    ], validators=[DataRequired()])
+    
+    counter_price = FloatField('Counter Price', validators=[Optional()])
+    message = TextAreaField('Message', validators=[Optional()])
+    
+    submit = SubmitField('Submit')
+
+# Form for simple booking actions (mark complete, payment confirmed)
+class SimpleBookingActionForm(FlaskForm):
+    action = HiddenField('Action', validators=[DataRequired()])
+    submit = SubmitField('Submit')
