@@ -181,6 +181,7 @@ class AdvancedSearchForm(FlaskForm):
     has_shower = BooleanField('Showers', default=False)
     has_floodlights = BooleanField('Floodlights', default=False)
     has_equipment = BooleanField('Equipment', default=False)
+    auto_approve_bookings = BooleanField('Instant Booking', default=False)
     min_rating = SelectField('Minimum Rating', choices=[
         ('0', 'Any Rating'),
         ('3', '3+ Stars'),

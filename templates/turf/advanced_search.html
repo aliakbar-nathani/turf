@@ -99,6 +99,14 @@
                             <label class="form-check-label">{{ form.has_equipment.label }}</label>
                         </div>
                     </div>
+                    
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check">
+                            {{ form.auto_approve_bookings(class="form-check-input") }}
+                            <label class="form-check-label">{{ form.auto_approve_bookings.label }}</label>
+                            <div class="small text-muted">Book without owner approval</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="d-flex justify-content-between">
