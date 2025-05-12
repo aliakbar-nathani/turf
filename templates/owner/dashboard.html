@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <span class="booking-status status-{{ booking.status.lower() }}" 
                                                       data-bs-toggle="tooltip" 
                                                       data-bs-placement="top" 
-                                                      title="{% if booking.status == 'pending' %}Waiting for your approval{% elif booking.status == 'negotiating' %}Price negotiation in progress{% elif booking.status == 'payment_pending' %}Approved, waiting for payment{% elif booking.status == 'confirmed' %}Booking confirmed{% elif booking.status == 'completed' %}Booking completed{% else %}Booking cancelled{% endif %}">
+                                                      title="{% if booking.status == 'pending' %}Waiting for your approval or counter-offer{% elif booking.status == 'negotiating' %}Price negotiation in progress{% elif booking.status == 'payment_pending' %}Approved, waiting for payment (use 'Confirm Payment' when cash is received){% elif booking.status == 'confirmed' %}Booking is confirmed and scheduled (use 'Mark as Completed' after the event){% elif booking.status == 'completed' %}Booking service has been delivered{% else %}Booking cancelled{% endif %}">
                                                     {% if booking.status == 'pending' %}
                                                         Needs Review
                                                     {% elif booking.status == 'negotiating' %}
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <span class="badge bg-{{ 'success' if booking.payment_status == 'paid' else 'warning text-dark' }}"
                                                       data-bs-toggle="tooltip" 
                                                       data-bs-placement="top" 
-                                                      title="{% if booking.payment_status == 'pending_payment' %}Payment has not been received yet{% else %}Payment has been received{% endif %}">
+                                                      title="{% if booking.payment_status == 'pending_payment' %}Payment has not been received yet. Use 'Confirm Payment' when you receive cash payment{% else %}Payment has been received and confirmed{% endif %}">
                                                     {% if booking.payment_status == 'pending_payment' %}
                                                         Not Paid
                                                     {% else %}
