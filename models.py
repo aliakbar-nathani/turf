@@ -15,6 +15,7 @@ class NotificationType:
     BOOKING_REMINDER = 'booking_reminder'
     BOOKING_CONFIRMED = 'booking_confirmed'
     BOOKING_CANCELLED = 'booking_cancelled'
+    BOOKING_AUTO_APPROVED = 'booking_auto_approved'
     PAYMENT_SUCCESS = 'payment_success'
     PAYMENT_FAILED = 'payment_failed'
     PRICE_NEGOTIATION = 'price_negotiation'

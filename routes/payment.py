@@ -104,9 +104,29 @@ def payment_success(booking_id):
             session = stripe.checkout.Session.retrieve(booking.payment_id)
             if session.payment_status == 'paid':
                 booking.payment_status = 'paid'
+                
                 # If booking was in payment_pending status, update it to confirmed
                 if booking.status == BookingStatus.PAYMENT_PENDING:
-                    booking.status = BookingStatus.CONFIRMED
+                    # Get turf information to check auto_approve setting
+                    turf = Turf.query.get(booking.turf_id)
+                    
+                    # If turf has auto_approve enabled or it's a pay_on_arrival booking, 
+                    # automatically confirm the booking
+                    if turf and turf.auto_approve_bookings:
+                        booking.status = BookingStatus.CONFIRMED
+                        # Create a notification for the owner
+                        owner_notification = Notification(
+                            user_id=turf.owner_id,
+                            type=NotificationType.BOOKING_AUTO_APPROVED,
+                            title='Booking Auto-Approved',
+                            message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed.',
+                            booking_id=booking.id,
+                            turf_id=booking.turf_id
+                        )
+                        db.session.add(owner_notification)
+                    else:
+                        # Regular flow - set to confirmed
+                        booking.status = BookingStatus.CONFIRMED
                 db.session.commit()
                 
                 # Create a notification for the user
@@ -342,7 +362,25 @@ def mobile_payment_status(booking_id):
         if is_paid and booking.payment_status != 'paid':
             booking.payment_status = 'paid'
             if booking.status == BookingStatus.PAYMENT_PENDING:
-                booking.status = BookingStatus.CONFIRMED
+                # Get turf information to check auto_approve setting
+                turf = Turf.query.get(booking.turf_id)
+                
+                # If turf has auto_approve enabled, automatically confirm the booking
+                if turf and turf.auto_approve_bookings:
+                    booking.status = BookingStatus.CONFIRMED
+                    # Create a notification for the owner
+                    owner_notification = Notification(
+                        user_id=turf.owner_id,
+                        type=NotificationType.BOOKING_AUTO_APPROVED,
+                        title='Booking Auto-Approved',
+                        message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed via mobile app.',
+                        booking_id=booking.id,
+                        turf_id=booking.turf_id
+                    )
+                    db.session.add(owner_notification)
+                else:
+                    # Regular flow - set to confirmed
+                    booking.status = BookingStatus.CONFIRMED
             db.session.commit()
             
         return json.dumps({
@@ -395,7 +433,25 @@ def webhook():
                     
                     # If booking was in payment_pending status, update it to confirmed
                     if booking.status == BookingStatus.PAYMENT_PENDING:
-                        booking.status = BookingStatus.CONFIRMED
+                        # Get turf information to check auto_approve setting
+                        turf = Turf.query.get(booking.turf_id)
+                        
+                        # If turf has auto_approve enabled, automatically confirm the booking
+                        if turf and turf.auto_approve_bookings:
+                            booking.status = BookingStatus.CONFIRMED
+                            # Create a notification for the owner
+                            owner_notification = Notification(
+                                user_id=turf.owner_id,
+                                type=NotificationType.BOOKING_AUTO_APPROVED,
+                                title='Booking Auto-Approved',
+                                message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed.',
+                                booking_id=booking.id,
+                                turf_id=booking.turf_id
+                            )
+                            db.session.add(owner_notification)
+                        else:
+                            # Regular flow - set to confirmed
+                            booking.status = BookingStatus.CONFIRMED
                     
                     db.session.commit()
                     
