@@ -3,6 +3,36 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle radio buttons to show/hide counter price input in dashboard modals
+    const respondModals = document.querySelectorAll('[id^="respondModal"]');
+    
+    respondModals.forEach(function(modal) {
+        const radioButtons = modal.querySelectorAll('input[type=radio][name="action"]');
+        const counterPriceContainer = modal.querySelector('.counter-price-container');
+        const counterMessageContainer = modal.querySelector('.counter-message-container');
+        
+        radioButtons.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (this.value === 'counter') {
+                    counterPriceContainer.style.display = 'block';
+                    counterMessageContainer.style.display = 'block';
+                } else {
+                    counterPriceContainer.style.display = 'none';
+                    if (this.value === 'reject') {
+                        counterMessageContainer.style.display = 'block';
+                    } else {
+                        counterMessageContainer.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col-md-8">
@@ -91,7 +121,74 @@
                                             </td>
                                             <td>
                                                 {% if booking.status in ['pending', 'negotiating'] %}
-                                                    <a href="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" class="btn btn-sm btn-outline-primary">Respond</a>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#respondModal{{ booking.id }}">
+                                                        Respond
+                                                    </button>
+                                                    
+                                                    <!-- Respond Modal -->
+                                                    <div class="modal fade" id="respondModal{{ booking.id }}" tabindex="-1" aria-labelledby="respondModalLabel{{ booking.id }}" aria-hidden="true">
+                                                        <div class="modal-dialog">
+                                                            <div class="modal-content">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title" id="respondModalLabel{{ booking.id }}">Respond to Booking</h5>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <div class="mb-3">
+                                                                        <strong>Booking Details:</strong><br>
+                                                                        Turf: {{ booking.turf.name }}<br>
+                                                                        Date: {{ booking.booking_date.strftime('%d %b %Y') }}<br>
+                                                                        Time: {{ booking.start_time.strftime('%I:%M %p') }} - {{ booking.end_time.strftime('%I:%M %p') }}<br>
+                                                                        User: {{ booking.user.username }}
+                                                                    </div>
+                                                                    
+                                                                    <div class="mb-3">
+                                                                        <strong>Pricing:</strong><br>
+                                                                        Original Price: ₹{{ booking.original_price }}<br>
+                                                                        {% if booking.user_proposed_price %}
+                                                                            User Proposed: ₹{{ booking.user_proposed_price }}<br>
+                                                                        {% endif %}
+                                                                        Current Price: ₹{{ booking.total_price }}
+                                                                    </div>
+                                                                    
+                                                                    <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post">
+                                                                        {{ booking_action_form.hidden_tag() }}
+                                                                        <div class="mb-3">
+                                                                            {% for subfield in booking_action_form.action %}
+                                                                            <div class="form-check mb-2">
+                                                                                {{ subfield(class="form-check-input", id=subfield.id ~ booking.id ~ "dash") }}
+                                                                                <label class="form-check-label" for="{{ subfield.id ~ booking.id ~ "dash" }}">
+                                                                                    {{ subfield.label.text }}
+                                                                                    {% if subfield.data == 'accept' %}
+                                                                                        (₹{{ booking.total_price }})
+                                                                                    {% endif %}
+                                                                                </label>
+                                                                            </div>
+                                                                            {% endfor %}
+                                                                        </div>
+                                                                        
+                                                                        <div class="mb-3 counter-price-container" style="display: none;">
+                                                                            {{ booking_action_form.counter_price.label(class="form-label") }}
+                                                                            <div class="input-group">
+                                                                                <span class="input-group-text">₹</span>
+                                                                                {{ booking_action_form.counter_price(class="form-control", id="counter_price" ~ booking.id ~ "dash", min=booking.original_price * 0.7, max=booking.original_price * 1.2, step="0.01", value=booking.original_price) }}
+                                                                            </div>
+                                                                        </div>
+                                                                        
+                                                                        <div class="mb-3 counter-message-container" style="display: none;">
+                                                                            {{ booking_action_form.message.label(class="form-label") }}
+                                                                            {{ booking_action_form.message(class="form-control", id="message" ~ booking.id ~ "dash", rows="2", placeholder="Optional message explaining your decision") }}
+                                                                        </div>
+                                                                        
+                                                                        <div class="text-end">
+                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                            {{ booking_action_form.submit(class="btn btn-primary") }}
+                                                                        </div>
+                                                                    </form>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 {% else %}
                                                     <span class="text-muted">-</span>
                                                 {% endif %}

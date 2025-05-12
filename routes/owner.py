@@ -63,6 +63,10 @@ def dashboard():
         db.desc('booking_count')
     ).limit(3).all()
     
+    # Create forms for responding to bookings
+    booking_action_form = BookingActionForm()
+    simple_action_form = SimpleBookingActionForm()
+    
     return render_template(
         'owner/dashboard.html',
         turfs_count=turfs_count,
@@ -71,6 +75,8 @@ def dashboard():
         recent_revenue=recent_revenue,
         recent_bookings=recent_bookings,
         popular_turfs=popular_turfs,
+        booking_action_form=booking_action_form,
+        simple_action_form=simple_action_form,
         title='Owner Dashboard'
     )
 
