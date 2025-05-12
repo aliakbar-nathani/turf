@@ -251,11 +251,24 @@ def book_turf(turf_id):
         booking_status = BookingStatus.PENDING
         payment_method = form.payment_option.data
         
+        # Check if turf has auto-approve enabled
+        auto_approve = turf.auto_approve_bookings
+        
         # Handle negotiation case
         if negotiation_enabled:
+            # Even with auto-approve, negotiations always need manual review
             booking_status = BookingStatus.NEGOTIATING
             payment_method = 'pending_negotiation'
-        # Handle regular booking cases
+        # Handle auto-approve cases
+        elif auto_approve:
+            if payment_method == 'pay_on_arrival':
+                # For pay-on-arrival with auto-approve, confirm immediately
+                booking_status = BookingStatus.CONFIRMED
+            elif payment_method == 'pay_online':
+                # For online payments, it's payment_pending first even with auto-approve
+                # After payment, it will be auto-confirmed in the payment callback
+                booking_status = BookingStatus.PAYMENT_PENDING
+        # Handle regular booking cases (no auto-approve)
         elif payment_method == 'pay_on_arrival':
             booking_status = BookingStatus.CONFIRMED
         else:
