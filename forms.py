@@ -74,6 +74,9 @@ class TurfForm(FlaskForm):
     has_floodlights = BooleanField('Floodlights')
     has_equipment = BooleanField('Equipment Available')
     has_refreshments = BooleanField('Refreshments Available')
+    
+    # Booking settings
+    auto_approve_bookings = BooleanField('Auto-approve bookings (instantly confirms bookings with paid or pay-on-arrival)')
     surface_type = SelectField('Surface Type', choices=[
         ('grass', 'Grass'), 
         ('artificial', 'Artificial Turf'),
