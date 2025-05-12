@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <span class="badge bg-{{ 'success' if booking.payment_status == 'paid' else 'warning text-dark' }}"
                                                       data-bs-toggle="tooltip" 
                                                       data-bs-placement="top" 
-                                                      title="{% if booking.payment_status == 'pending_payment' %}Payment has not been received yet. Use 'Confirm Payment' when you receive cash payment{% else %}Payment has been received and confirmed{% endif %}">
-                                                    {% if booking.payment_status == 'pending_payment' %}
+                                                      title="{% if booking.payment_status in ['pending_payment', 'pending', 'unpaid'] %}Payment has not been received yet. Use 'Confirm Payment' when you receive cash payment{% else %}Payment has been received and confirmed{% endif %}">
+                                                    {% if booking.payment_status in ['pending_payment', 'pending', 'unpaid'] %}
                                                         Not Paid
                                                     {% else %}
                                                         Paid
