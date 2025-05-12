@@ -682,6 +682,7 @@ def advanced_search_turfs():
                 'has_shower': turf.has_shower,
                 'has_floodlights': turf.has_floodlights,
                 'has_equipment': turf.has_equipment,
+                'auto_approve_bookings': turf.auto_approve_bookings,
                 'image': primary_image.url if primary_image else None
             }
             turfs_data.append(turf_data)
