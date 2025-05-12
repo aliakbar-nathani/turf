@@ -84,6 +84,13 @@
                                     {{ form.indoor.label(class="form-check-label") }}
                                 </div>
                                 
+                                <h5 class="mt-4">Booking Settings</h5>
+                                <div class="mb-3 form-check">
+                                    {{ form.auto_approve_bookings(class="form-check-input") }}
+                                    {{ form.auto_approve_bookings.label(class="form-check-label") }}
+                                    <small class="form-text d-block text-muted">When enabled, bookings will be automatically confirmed without your manual approval</small>
+                                </div>
+                                
                                 <div class="mb-3">
                                     {{ form.features.label(class="form-label") }}
                                     {% if form.features.errors %}

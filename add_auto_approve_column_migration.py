@@ -16,21 +16,22 @@ def add_auto_approve_column():
     
     try:
         engine = create_engine(db_url)
-        conn = engine.connect()
-
-        # Check if the column already exists
-        result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'turf' AND column_name = 'auto_approve_bookings'"))
-        if result.rowcount > 0:
-            print("Column auto_approve_bookings already exists. Skipping migration.")
-            conn.close()
-            return True
-            
-        # Add the column
-        conn.execute(text("ALTER TABLE turf ADD COLUMN auto_approve_bookings BOOLEAN DEFAULT FALSE"))
         
-        print("Successfully added auto_approve_bookings column to turf table.")
-        conn.close()
-        return True
+        with engine.begin() as conn:
+            # Check if the column already exists
+            result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'turf' AND column_name = 'auto_approve_bookings'"))
+            rows = result.fetchall()
+            
+            if len(rows) > 0:
+                print("Column auto_approve_bookings already exists. Skipping migration.")
+                return True
+                
+            # Add the column
+            conn.execute(text("ALTER TABLE turf ADD COLUMN auto_approve_bookings BOOLEAN DEFAULT FALSE"))
+            
+            # Commit is automatic with engine.begin()
+            print("Successfully added auto_approve_bookings column to turf table.")
+            return True
     except Exception as e:
         print(f"ERROR: Failed to add auto_approve_bookings column: {str(e)}")
         return False
