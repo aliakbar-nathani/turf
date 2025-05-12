@@ -65,6 +65,7 @@ class Turf(db.Model):
     size = db.Column(db.String(50), nullable=True)  # 5-a-side, 7-a-side, etc.
     indoor = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
+    auto_approve_bookings = db.Column(db.Boolean, default=False)  # Automatically approve bookings if set to True
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # These properties are not actually in the database but are needed for the model

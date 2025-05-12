@@ -228,6 +228,7 @@
                                                             <button type="submit" class="btn btn-link text-success p-0">Mark as Completed</button>
                                                         </form>
                                                     </li>
+                                                    {% if booking.payment_status in ['pending_payment', 'pending', 'unpaid'] %}
                                                     <li>
                                                         <form action="{{ url_for('owner.respond_booking', booking_id=booking.id) }}" method="post" class="dropdown-item">
                                                             {{ simple_action_form.hidden_tag() }}
@@ -235,6 +236,7 @@
                                                             <button type="submit" class="btn btn-link text-primary p-0">Confirm Payment</button>
                                                         </form>
                                                     </li>
+                                                    {% endif %}
                                                 </ul>
                                             </div>
                                         {% elif booking.status == 'completed' %}
