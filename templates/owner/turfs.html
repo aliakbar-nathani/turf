@@ -43,6 +43,11 @@
                                 <span class="badge bg-{% if turf.indoor %}info{% else %}success{% endif %} me-2">
                                     {{ 'Indoor' if turf.indoor else 'Outdoor' }}
                                 </span>
+                                {% if turf.auto_approve_bookings %}
+                                <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="top" title="Bookings are automatically approved when paid">
+                                    <i class="fas fa-check-circle me-1"></i>Auto-Approve
+                                </span>
+                                {% endif %}
                             </p>
                             
                             {% if turf.features %}

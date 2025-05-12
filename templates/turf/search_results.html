@@ -85,6 +85,12 @@
                                 <span class="badge bg-{% if turf.indoor %}info{% else %}success{% endif %} me-2">
                                     {{ 'Indoor' if turf.indoor else 'Outdoor' }}
                                 </span>
+                                {% if turf.auto_approve_bookings %}
+                                <span class="badge bg-warning text-dark" data-bs-toggle="tooltip" data-bs-placement="top" 
+                                      title="Book instantly without waiting for owner approval">
+                                    <i class="fas fa-bolt me-1"></i>Instant
+                                </span>
+                                {% endif %}
                             </p>
                             
                             {% if turf.features %}
