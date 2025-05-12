@@ -565,6 +565,7 @@ def advanced_search_turfs():
         has_shower = request.args.get('has_shower', None)
         has_floodlights = request.args.get('has_floodlights', None)
         has_equipment = request.args.get('has_equipment', None)
+        auto_approve_bookings = request.args.get('auto_approve_bookings', None)
         min_rating = request.args.get('min_rating', None, type=int)
         surface_type = request.args.get('surface_type', None, type=str)
         
@@ -588,6 +589,8 @@ def advanced_search_turfs():
             has_floodlights = has_floodlights.lower() == 'true'
         if has_equipment is not None:
             has_equipment = has_equipment.lower() == 'true'
+        if auto_approve_bookings is not None:
+            auto_approve_bookings = auto_approve_bookings.lower() == 'true'
         
         # Start with active turfs
         query = Turf.query.filter(Turf.active == True)
@@ -620,6 +623,8 @@ def advanced_search_turfs():
             if has_floodlights and not turf.has_floodlights:
                 include = False
             if has_equipment and not turf.has_equipment:
+                include = False
+            if auto_approve_bookings and not turf.auto_approve_bookings:
                 include = False
             
             # Apply surface type filter

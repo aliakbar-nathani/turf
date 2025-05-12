@@ -208,6 +208,7 @@ def advanced_search():
         has_shower = form.has_shower.data
         has_floodlights = form.has_floodlights.data
         has_equipment = form.has_equipment.data
+        auto_approve_bookings = form.auto_approve_bookings.data
         min_rating = form.min_rating.data
         surface_type = form.surface_type.data
         
@@ -243,6 +244,8 @@ def advanced_search():
             if has_floodlights and not turf.has_floodlights:
                 continue
             if has_equipment and not turf.has_equipment:
+                continue
+            if auto_approve_bookings and not turf.auto_approve_bookings:
                 continue
             if surface_type and turf.surface_type != surface_type:
                 continue
