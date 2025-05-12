@@ -103,7 +103,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <th>User</th>
                                         <th>Date</th>
                                         <th>Price</th>
-                                        <th>Status</th>
+                                        <th>Booking Status</th>
+                                        <th>Payment Status</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -115,8 +116,35 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <td>{{ booking.booking_date.strftime('%d %b') }}</td>
                                             <td>₹{{ booking.total_price }}</td>
                                             <td>
-                                                <span class="booking-status status-{{ booking.status.lower() }}">
-                                                    {{ booking.status }}
+                                                <span class="booking-status status-{{ booking.status.lower() }}" 
+                                                      data-bs-toggle="tooltip" 
+                                                      data-bs-placement="top" 
+                                                      title="{% if booking.status == 'pending' %}Waiting for your approval{% elif booking.status == 'negotiating' %}Price negotiation in progress{% elif booking.status == 'payment_pending' %}Approved, waiting for payment{% elif booking.status == 'confirmed' %}Booking confirmed{% elif booking.status == 'completed' %}Booking completed{% else %}Booking cancelled{% endif %}">
+                                                    {% if booking.status == 'pending' %}
+                                                        Needs Review
+                                                    {% elif booking.status == 'negotiating' %}
+                                                        Negotiating
+                                                    {% elif booking.status == 'payment_pending' %}
+                                                        Approved (Payment Due)
+                                                    {% elif booking.status == 'confirmed' %}
+                                                        Confirmed
+                                                    {% elif booking.status == 'completed' %}
+                                                        Completed
+                                                    {% else %}
+                                                        Cancelled
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ 'success' if booking.payment_status == 'paid' else 'warning text-dark' }}"
+                                                      data-bs-toggle="tooltip" 
+                                                      data-bs-placement="top" 
+                                                      title="{% if booking.payment_status == 'pending_payment' %}Payment has not been received yet{% else %}Payment has been received{% endif %}">
+                                                    {% if booking.payment_status == 'pending_payment' %}
+                                                        Not Paid
+                                                    {% else %}
+                                                        Paid
+                                                    {% endif %}
                                                 </span>
                                             </td>
                                             <td>
@@ -321,4 +349,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
 {% endblock %}
