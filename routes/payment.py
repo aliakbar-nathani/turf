@@ -1,60 +1,45 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
-from flask_login import login_required, current_user
-import stripe
 import os
-import json
+from flask import Blueprint, redirect, request, url_for, flash, render_template, jsonify, current_app
+import stripe
+from models import db, Booking, BookingStatus
+from flask_login import login_required, current_user
+import logging
 
-from app import db
-from models import Booking, BookingStatus, Turf, Notification, NotificationType
+# Set up Stripe API key
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
+# Create Blueprint
 payment = Blueprint('payment', __name__)
 
-# Setup Stripe
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
-YOUR_DOMAIN = os.environ.get('REPLIT_DEV_DOMAIN', '') if os.environ.get('REPLIT_DEPLOYMENT', '') != '' else os.environ.get('REPLIT_DOMAINS', '').split(',')[0]
-
-@payment.route('/checkout/<int:booking_id>', methods=['GET'])
-@login_required
-def checkout(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
-    
-    # Check if booking belongs to current user
-    if booking.user_id != current_user.id:
-        abort(403)
-    
-    # Check if booking is in confirmed or payment_pending status
-    if booking.status != BookingStatus.CONFIRMED and booking.status != BookingStatus.PAYMENT_PENDING:
-        flash('This booking cannot be processed for payment.', 'danger')
-        return redirect(url_for('user.bookings'))
-    
-    # Check if booking is already paid
-    if booking.payment_status == 'paid':
-        flash('This booking has already been paid for.', 'info')
-        return redirect(url_for('user.bookings'))
-    
-    # Get turf details
-    turf = Turf.query.get(booking.turf_id)
-    
-    return render_template(
-        'payment/checkout.html',
-        booking=booking,
-        turf=turf,
-        title='Complete Payment'
-    )
+# Helper function to get the base domain
+def get_domain():
+    if os.environ.get('REPLIT_DEPLOYMENT'):
+        return os.environ.get('REPLIT_DEV_DOMAIN')
+    else:
+        domains = os.environ.get('REPLIT_DOMAINS', '').split(',')
+        return domains[0] if domains else request.host
 
 @payment.route('/create-checkout-session/<int:booking_id>', methods=['POST'])
 @login_required
 def create_checkout_session(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
-    
-    # Check if booking belongs to current user
-    if booking.user_id != current_user.id:
-        abort(403)
-    
-    # Get turf details
-    turf = Turf.query.get(booking.turf_id)
-    
+    """
+    Create a Stripe checkout session for a booking
+    """
     try:
+        # Get the booking
+        booking = Booking.query.get_or_404(booking_id)
+        
+        # Ensure the booking belongs to the current user or the turf owner
+        if booking.user_id != current_user.id and booking.turf.owner_id != current_user.id:
+            flash('You do not have permission to process this payment', 'danger')
+            return redirect(url_for('user.dashboard'))
+        
+        # Ensure booking is in payment_pending status
+        if booking.status != BookingStatus.PAYMENT_PENDING:
+            flash('This booking is not ready for payment', 'warning')
+            return redirect(url_for('user.dashboard'))
+        
+        # Create the checkout session
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[
@@ -62,416 +47,163 @@ def create_checkout_session(booking_id):
                     'price_data': {
                         'currency': 'inr',
                         'product_data': {
-                            'name': f'Booking for {turf.name}',
-                            'description': f'Date: {booking.booking_date}, Time: {booking.start_time.strftime("%H:%M")} - {booking.end_time.strftime("%H:%M")}',
+                            'name': f'Booking for {booking.turf.name}',
+                            'description': f'Date: {booking.booking_date}, Time: {booking.start_time} - {booking.end_time}',
                         },
-                        'unit_amount': int(booking.total_price * 100),  # amount in cents
+                        'unit_amount': int(booking.total_price * 100),  # Amount in paise
                     },
                     'quantity': 1,
                 },
             ],
             mode='payment',
-            success_url='https://' + YOUR_DOMAIN + f'/payment/success/{booking_id}',
-            cancel_url='https://' + YOUR_DOMAIN + f'/payment/cancel/{booking_id}',
+            success_url=url_for('payment.success', booking_id=booking.id, _external=True),
+            cancel_url=url_for('payment.cancel', booking_id=booking.id, _external=True),
             client_reference_id=str(booking.id),
-            metadata={
-                'booking_id': booking.id,
-                'user_id': current_user.id
-            }
         )
         
-        # Update booking with payment information
+        # Update the booking with the payment ID
         booking.payment_id = checkout_session.id
         db.session.commit()
         
+        # Redirect to Stripe Checkout
         return redirect(checkout_session.url, code=303)
+    
     except Exception as e:
-        flash(f'An error occurred: {str(e)}', 'danger')
-        return redirect(url_for('payment.checkout', booking_id=booking.id))
+        logging.error(f"Stripe checkout error: {str(e)}")
+        flash('Payment processing error. Please try again.', 'danger')
+        return redirect(url_for('user.dashboard'))
+
+@payment.route('/webhook', methods=['POST'])
+def webhook():
+    """
+    Handle Stripe webhook events
+    """
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+
+    try:
+        # Verify webhook signature and extract the event
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+        )
+    except ValueError as e:
+        # Invalid payload
+        logging.error(f"Invalid Stripe payload: {str(e)}")
+        return jsonify(success=False), 400
+    except stripe.error.SignatureVerificationError as e:
+        # Invalid signature
+        logging.error(f"Invalid Stripe signature: {str(e)}")
+        return jsonify(success=False), 400
+
+    # Handle the event
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        
+        # Get booking ID from client_reference_id
+        booking_id = int(session.get('client_reference_id', 0))
+        if booking_id:
+            # Update booking status
+            booking = Booking.query.get(booking_id)
+            if booking:
+                booking.status = BookingStatus.CONFIRMED
+                booking.payment_status = 'paid'
+                db.session.commit()
+                
+                # TODO: Send confirmation email/notification
+                logging.info(f"Payment completed for booking {booking_id}")
+    
+    # Return a success response to Stripe
+    return jsonify(success=True)
 
 @payment.route('/success/<int:booking_id>')
 @login_required
-def payment_success(booking_id):
+def success(booking_id):
+    """
+    Handle successful payment
+    """
     booking = Booking.query.get_or_404(booking_id)
     
-    # Check if booking belongs to current user
-    if booking.user_id != current_user.id:
-        abort(403)
+    # Check if the booking status is already updated by the webhook
+    if booking.status != BookingStatus.CONFIRMED:
+        # If not, update it (in case webhook hasn't processed yet)
+        booking.status = BookingStatus.CONFIRMED
+        booking.payment_status = 'paid'
+        db.session.commit()
     
-    # Verify payment with Stripe (in a real app, this would be handled by a webhook)
-    if booking.payment_id:
-        try:
-            session = stripe.checkout.Session.retrieve(booking.payment_id)
-            if session.payment_status == 'paid':
-                booking.payment_status = 'paid'
-                
-                # If booking was in payment_pending status, update it to confirmed
-                if booking.status == BookingStatus.PAYMENT_PENDING:
-                    # Get turf information to check auto_approve setting
-                    turf = Turf.query.get(booking.turf_id)
-                    
-                    # If turf has auto_approve enabled or it's a pay_on_arrival booking, 
-                    # automatically confirm the booking
-                    if turf and turf.auto_approve_bookings:
-                        booking.status = BookingStatus.CONFIRMED
-                        # Create a notification for the owner
-                        owner_notification = Notification(
-                            user_id=turf.owner_id,
-                            type=NotificationType.BOOKING_AUTO_APPROVED,
-                            title='Booking Auto-Approved',
-                            message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed.',
-                            booking_id=booking.id,
-                            turf_id=booking.turf_id
-                        )
-                        db.session.add(owner_notification)
-                    else:
-                        # Regular flow - set to confirmed
-                        booking.status = BookingStatus.CONFIRMED
-                db.session.commit()
-                
-                # Create a notification for the user
-                notification = Notification(
-                    user_id=booking.user_id,
-                    type=NotificationType.PAYMENT_SUCCESS,
-                    title='Payment Successful',
-                    message=f'Your payment for booking #{booking.id} has been successfully processed.',
-                    booking_id=booking.id,
-                    turf_id=booking.turf_id
-                )
-                db.session.add(notification)
-                db.session.commit()
-            else:
-                # This is unlikely to happen in this flow, but added for completeness
-                flash('Payment has not been completed yet.', 'warning')
-                return redirect(url_for('payment.checkout', booking_id=booking.id))
-        except Exception as e:
-            flash(f'An error occurred while verifying payment: {str(e)}', 'danger')
-    
-    turf = Turf.query.get(booking.turf_id)
-    
-    return render_template(
-        'payment/success.html',
-        booking=booking,
-        turf=turf,
-        title='Payment Successful'
-    )
+    flash('Payment successful! Your booking has been confirmed.', 'success')
+    return render_template('payment/success.html', booking=booking)
 
 @payment.route('/cancel/<int:booking_id>')
 @login_required
-def payment_cancel(booking_id):
+def cancel(booking_id):
+    """
+    Handle cancelled payment
+    """
     booking = Booking.query.get_or_404(booking_id)
     
-    # Check if booking belongs to current user
-    if booking.user_id != current_user.id:
-        abort(403)
-    
-    turf = Turf.query.get(booking.turf_id)
-    
-    return render_template(
-        'payment/cancel.html',
-        booking=booking,
-        turf=turf,
-        title='Payment Cancelled'
-    )
+    flash('Payment was cancelled. Your booking is still pending.', 'warning')
+    return render_template('payment/cancel.html', booking=booking)
 
-@payment.route('/mobile-checkout/<int:booking_id>', methods=['GET', 'POST'])
-def mobile_checkout(booking_id):
+# Mobile API endpoint for creating checkout session
+@payment.route('/api/create-checkout-session/<int:booking_id>', methods=['POST'])
+@login_required
+def api_create_checkout_session(booking_id):
     """
-    Endpoint for mobile app to create a checkout session
-    Returns a JSON response with the Stripe checkout URL
+    Create a Stripe checkout session for mobile app
     """
-    if request.method == 'GET':
-        # Just return info that this is a POST endpoint
-        return json.dumps({
-            'success': False,
-            'message': 'This endpoint requires a POST request'
-        }), 400, {'Content-Type': 'application/json'}
-        
-    booking = Booking.query.get_or_404(booking_id)
-    
-    # Validate the booking belongs to the correct user
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return json.dumps({
-            'success': False,
-            'message': 'Authorization required'
-        }), 401, {'Content-Type': 'application/json'}
-
-    token = auth_header.split(' ')[1]
     try:
-        import jwt
-        from datetime import datetime, timezone
+        # Get the booking
+        booking = Booking.query.get_or_404(booking_id)
         
-        secret_key = 'turf-booking-jwt-secret-for-mobile-app'  # Match the key used in mobile_api.py
-        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
-        
-        # Extract user ID from payload
-        user_id = int(payload.get('sub', 0))  # Using 'sub' key that mobile_api.py uses
-        
-        if booking.user_id != user_id:
-            return json.dumps({
+        # Ensure the booking belongs to the current user
+        if booking.user_id != current_user.id:
+            return jsonify({
                 'success': False,
-                'message': 'Unauthorized access to this booking'
-            }), 403, {'Content-Type': 'application/json'}
-    
-    except Exception as e:
-        return json.dumps({
-            'success': False,
-            'message': f'Authorization failed: {str(e)}'
-        }), 401, {'Content-Type': 'application/json'}
-    
-    # Check if booking is in valid status for payment
-    if booking.status != BookingStatus.CONFIRMED and booking.status != BookingStatus.PAYMENT_PENDING:
-        return json.dumps({
-            'success': False,
-            'message': 'This booking cannot be processed for payment'
-        }), 400, {'Content-Type': 'application/json'}
-    
-    # Check if booking is already paid
-    if booking.payment_status == 'paid':
-        return json.dumps({
-            'success': False,
-            'message': 'This booking has already been paid for'
-        }), 400, {'Content-Type': 'application/json'}
-    
-    # Get turf details
-    turf = Turf.query.get(booking.turf_id)
-    
-    try:
+                'message': 'You do not have permission to process this payment'
+            }), 403
+        
+        # Ensure booking is in payment_pending status
+        if booking.status != BookingStatus.PAYMENT_PENDING:
+            return jsonify({
+                'success': False,
+                'message': 'This booking is not ready for payment'
+            }), 400
+        
+        # Create the checkout session
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[
                 {
                     'price_data': {
-                        'currency': 'usd',  # Changed to USD for international compatibility
+                        'currency': 'inr',
                         'product_data': {
-                            'name': f'Booking for {turf.name}',
-                            'description': f'Date: {booking.booking_date}, Time: {booking.start_time.strftime("%H:%M")} - {booking.end_time.strftime("%H:%M")}',
-                            'images': [turf.image_url] if turf.image_url else [],
+                            'name': f'Booking for {booking.turf.name}',
+                            'description': f'Date: {booking.booking_date}, Time: {booking.start_time} - {booking.end_time}',
                         },
-                        'unit_amount': int(booking.total_price * 100),  # amount in cents
+                        'unit_amount': int(booking.total_price * 100),  # Amount in paise
                     },
                     'quantity': 1,
                 },
             ],
             mode='payment',
-            success_url='https://' + YOUR_DOMAIN + f'/payment/mobile-success/{booking_id}',
-            cancel_url='https://' + YOUR_DOMAIN + f'/payment/mobile-cancel/{booking_id}',
+            success_url=url_for('payment.success', booking_id=booking.id, _external=True),
+            cancel_url=url_for('payment.cancel', booking_id=booking.id, _external=True),
             client_reference_id=str(booking.id),
-            metadata={
-                'booking_id': booking.id,
-                'user_id': user_id,
-                'platform': 'mobile'
-            }
         )
         
-        # Update booking with payment information
+        # Update the booking with the payment ID
         booking.payment_id = checkout_session.id
         db.session.commit()
         
-        return json.dumps({
+        # Return checkout URL for mobile app
+        return jsonify({
             'success': True,
-            'checkout_url': checkout_session.url,
-            'session_id': checkout_session.id
-        }), 200, {'Content-Type': 'application/json'}
-        
-    except Exception as e:
-        return json.dumps({
-            'success': False,
-            'message': f'An error occurred: {str(e)}'
-        }), 500, {'Content-Type': 'application/json'}
-
-@payment.route('/mobile-success/<int:booking_id>')
-def mobile_payment_success(booking_id):
-    """Simple success page that mobile app WebView can display"""
-    return render_template(
-        'payment/mobile_success.html',
-        booking_id=booking_id,
-        title='Payment Successful'
-    )
-
-@payment.route('/mobile-cancel/<int:booking_id>')
-def mobile_payment_cancel(booking_id):
-    """Simple cancel page that mobile app WebView can display"""
-    return render_template(
-        'payment/mobile_cancel.html',
-        booking_id=booking_id,
-        title='Payment Cancelled'
-    )
-
-@payment.route('/mobile-status/<int:booking_id>', methods=['GET'])
-def mobile_payment_status(booking_id):
-    """
-    API endpoint to check the payment status of a booking
-    Used by the mobile app to verify if payment has been completed
-    """
-    # Extract session_id from query parameters
-    session_id = request.args.get('session_id')
-    
-    if not session_id:
-        return json.dumps({
-            'success': False,
-            'message': 'Missing session_id parameter'
-        }), 400, {'Content-Type': 'application/json'}
-    
-    # Validate the booking belongs to the correct user
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        return json.dumps({
-            'success': False,
-            'message': 'Authorization required'
-        }), 401, {'Content-Type': 'application/json'}
-
-    token = auth_header.split(' ')[1]
-    try:
-        import jwt
-        from datetime import datetime, timezone
-        
-        secret_key = 'turf-booking-jwt-secret-for-mobile-app'  # Match the key used in mobile_api.py
-        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
-        
-        # Extract user ID from payload
-        user_id = int(payload.get('sub', 0))  # Using 'sub' key that mobile_api.py uses
-        
-        booking = Booking.query.get_or_404(booking_id)
-        if booking.user_id != user_id:
-            return json.dumps({
-                'success': False,
-                'message': 'Unauthorized access to this booking'
-            }), 403, {'Content-Type': 'application/json'}
+            'checkout_url': checkout_session.url
+        })
     
     except Exception as e:
-        return json.dumps({
+        logging.error(f"Stripe checkout error: {str(e)}")
+        return jsonify({
             'success': False,
-            'message': f'Authorization failed: {str(e)}'
-        }), 401, {'Content-Type': 'application/json'}
-    
-    # Check if the session_id matches the booking's payment_id
-    if booking.payment_id != session_id:
-        return json.dumps({
-            'success': False,
-            'message': 'Invalid session ID for this booking'
-        }), 400, {'Content-Type': 'application/json'}
-    
-    # Get payment status from Stripe
-    try:
-        session = stripe.checkout.Session.retrieve(session_id)
-        is_paid = session.payment_status == 'paid'
-        
-        # If the payment is completed but not reflected in our database, update it
-        if is_paid and booking.payment_status != 'paid':
-            booking.payment_status = 'paid'
-            if booking.status == BookingStatus.PAYMENT_PENDING:
-                # Get turf information to check auto_approve setting
-                turf = Turf.query.get(booking.turf_id)
-                
-                # If turf has auto_approve enabled, automatically confirm the booking
-                if turf and turf.auto_approve_bookings:
-                    booking.status = BookingStatus.CONFIRMED
-                    # Create a notification for the owner
-                    owner_notification = Notification(
-                        user_id=turf.owner_id,
-                        type=NotificationType.BOOKING_AUTO_APPROVED,
-                        title='Booking Auto-Approved',
-                        message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed via mobile app.',
-                        booking_id=booking.id,
-                        turf_id=booking.turf_id
-                    )
-                    db.session.add(owner_notification)
-                else:
-                    # Regular flow - set to confirmed
-                    booking.status = BookingStatus.CONFIRMED
-            db.session.commit()
-            
-        return json.dumps({
-            'success': True,
-            'is_paid': is_paid,
-            'booking_status': booking.status,
-            'message': 'Payment completed successfully' if is_paid else 'Payment pending'
-        }), 200, {'Content-Type': 'application/json'}
-        
-    except Exception as e:
-        return json.dumps({
-            'success': False,
-            'message': f'Error checking payment status: {str(e)}'
-        }), 500, {'Content-Type': 'application/json'}
-
-@payment.route('/webhook', methods=['POST'])
-def webhook():
-    payload = request.get_data(as_text=True)
-    sig_header = request.headers.get('Stripe-Signature')
-    
-    # In production you would have a real webhook secret
-    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
-
-    try:
-        if webhook_secret:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, webhook_secret
-            )
-        else:
-            # For testing without a webhook secret
-            data = json.loads(payload)
-            event = {"type": data.get("type"), "data": {"object": data}}
-    except ValueError as e:
-        # Invalid payload
-        return 'Invalid payload', 400
-    except Exception as e:
-        # Handle other errors, including Stripe signature verification errors
-        return f'Error processing webhook: {str(e)}', 400
-
-    # Handle specific events
-    if event['type'] == 'checkout.session.completed':
-        try:
-            session = event['data']['object']
-            booking_id = session.get('metadata', {}).get('booking_id')
-            
-            if booking_id:
-                booking = Booking.query.get(int(booking_id))
-                if booking:
-                    booking.payment_status = 'paid'
-                    
-                    # If booking was in payment_pending status, update it to confirmed
-                    if booking.status == BookingStatus.PAYMENT_PENDING:
-                        # Get turf information to check auto_approve setting
-                        turf = Turf.query.get(booking.turf_id)
-                        
-                        # If turf has auto_approve enabled, automatically confirm the booking
-                        if turf and turf.auto_approve_bookings:
-                            booking.status = BookingStatus.CONFIRMED
-                            # Create a notification for the owner
-                            owner_notification = Notification(
-                                user_id=turf.owner_id,
-                                type=NotificationType.BOOKING_AUTO_APPROVED,
-                                title='Booking Auto-Approved',
-                                message=f'A booking (#{booking.id}) has been automatically approved because online payment was completed.',
-                                booking_id=booking.id,
-                                turf_id=booking.turf_id
-                            )
-                            db.session.add(owner_notification)
-                        else:
-                            # Regular flow - set to confirmed
-                            booking.status = BookingStatus.CONFIRMED
-                    
-                    db.session.commit()
-                    
-                    # Create notification for user about successful payment
-                    notification = Notification(
-                        user_id=booking.user_id,
-                        type=NotificationType.PAYMENT_SUCCESS,
-                        title='Payment Successful',
-                        message=f'Your payment for booking #{booking.id} has been successfully processed.',
-                        booking_id=booking.id,
-                        turf_id=booking.turf_id
-                    )
-                    db.session.add(notification)
-                    db.session.commit()
-                    
-                    # Log the payment platform (web or mobile)
-                    platform = session.get('metadata', {}).get('platform', 'web')
-                    print(f"Payment completed on {platform} platform for booking #{booking_id}")
-        except Exception as e:
-            print(f"Error processing webhook: {str(e)}")
-            # Continue processing rather than failing the whole webhook
-    
-    return 'Success', 200
+            'message': 'Payment processing error. Please try again.'
+        }), 500
