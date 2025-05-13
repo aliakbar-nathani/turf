@@ -2,23 +2,15 @@ import os
 import logging
 
 from flask import Flask, request, Blueprint, jsonify, render_template
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
+from flask_pymongo import PyMongo
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import LoginManager
 from flask_cors import CORS
 import stripe
-
-
-class Base(DeclarativeBase):
-    pass
-
+from bson.objectid import ObjectId
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
-
-# Initialize SQLAlchemy with custom model class
-db = SQLAlchemy(model_class=Base)
 
 # Create Flask app
 app = Flask(__name__)
@@ -34,13 +26,17 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True,
 # Add hasattr to Jinja environment
 app.jinja_env.globals.update(hasattr=hasattr)
 
-# Configure the database using environment variables
+# Configure PostgreSQL database
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
 }
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy(app)
+
+# Import models after defining db to avoid circular imports
+import models
 
 # Configure CSRF protection
 from flask_wtf.csrf import CSRFProtect, CSRFError
@@ -75,9 +71,6 @@ def csrf_exempt_api_routes():
         if request.method == 'OPTIONS':
             return jsonify({'success': True}), 200
 
-# Initialize database with app
-db.init_app(app)
-
 # Set up login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -87,45 +80,39 @@ login_manager.login_message_category = 'info'
 # Set up Stripe
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_placeholder')
 
-with app.app_context():
-    # Import models and create tables
-    import models  # noqa: F401
-    db.create_all()
-    
-    # Import routes
-    from routes.auth import auth
-    from routes.user import user
-    from routes.owner import owner
-    from routes.admin import admin
-    from routes.booking import booking
-    from routes.payment import payment
-    from routes.home import home
-    from routes.reviews import reviews_bp
-    from routes.favorites import favorites
-    from routes.notifications import notifications
-    from routes.mobile_api import mobile_api
-    from routes.owner_direct_booking import owner_direct_booking
-    
-    # Register blueprints
-    app.register_blueprint(auth, url_prefix='/auth')
-    app.register_blueprint(user, url_prefix='/user')
-    app.register_blueprint(owner, url_prefix='/owner')
-    app.register_blueprint(admin, url_prefix='/admin')
-    app.register_blueprint(booking, url_prefix='/bookings')
-    app.register_blueprint(payment, url_prefix='/payment')
-    app.register_blueprint(reviews_bp, url_prefix='/reviews')
-    app.register_blueprint(favorites)  
-    app.register_blueprint(notifications)
-    app.register_blueprint(home)
-    app.register_blueprint(owner_direct_booking, url_prefix='/owner')
-    
-    # Register mobile API blueprint with CSRF exemption
-    csrf.exempt(mobile_api)
-    app.register_blueprint(mobile_api, url_prefix='/api/mobile')
-    
-    # User loader for Flask-Login
-    @login_manager.user_loader
-    def load_user(user_id):
-        from models import User
-        return User.query.get(int(user_id))
+# Import routes
+from routes.auth import auth
+from routes.user import user
+from routes.owner import owner
+from routes.admin import admin
+from routes.booking import booking
+from routes.payment import payment
+from routes.home import home
+from routes.reviews import reviews_bp
+from routes.favorites import favorites
+from routes.notifications import notifications
+from routes.mobile_api import mobile_api
+from routes.owner_direct_booking import owner_direct_booking
+
+# Register blueprints
+app.register_blueprint(auth, url_prefix='/auth')
+app.register_blueprint(user, url_prefix='/user')
+app.register_blueprint(owner, url_prefix='/owner')
+app.register_blueprint(admin, url_prefix='/admin')
+app.register_blueprint(booking, url_prefix='/bookings')
+app.register_blueprint(payment, url_prefix='/payment')
+app.register_blueprint(reviews_bp, url_prefix='/reviews')
+app.register_blueprint(favorites)  
+app.register_blueprint(notifications)
+app.register_blueprint(home)
+app.register_blueprint(owner_direct_booking, url_prefix='/owner')
+
+# Register mobile API blueprint with CSRF exemption
+csrf.exempt(mobile_api)
+app.register_blueprint(mobile_api, url_prefix='/api/mobile')
+
+# User loader for Flask-Login
+@login_manager.user_loader
+def load_user(user_id):
+    return models.User.query.get(int(user_id))
 

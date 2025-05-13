@@ -1,8 +1,7 @@
-from datetime import datetime
 from app import db
+from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy.ext.associationproxy import association_proxy
 
 # Define user roles
 class UserRole:
@@ -23,6 +22,14 @@ class NotificationType:
     TURF_FEATURED = 'turf_featured'
     DISPUTE_UPDATE = 'dispute_update'
 
+# Define booking status constants
+class BookingStatus:
+    PENDING = 'pending'  # Initial request
+    NEGOTIATING = 'negotiating'  # Price negotiation in progress
+    PAYMENT_PENDING = 'payment_pending'  # Payment needs to be completed
+    CONFIRMED = 'confirmed'  # Booking confirmed
+    CANCELLED = 'cancelled'  # Booking cancelled
+    COMPLETED = 'completed'  # Booking completed
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -69,8 +76,14 @@ class Turf(db.Model):
     auto_approve_bookings = db.Column(db.Boolean, default=False)  # Automatically approve bookings if set to True
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # These properties are not actually in the database but are needed for the model
-    # to match the forms and views. We'll implement them as properties instead.
+    # Foreign keys
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # Relationships
+    images = db.relationship('TurfImage', backref='turf', lazy='dynamic')
+    time_slots = db.relationship('TimeSlot', backref='turf', lazy='dynamic')
+    bookings = db.relationship('Booking', backref='turf', lazy='dynamic')
+    
     @property
     def has_parking(self):
         return self.has_feature('parking')
@@ -97,7 +110,6 @@ class Turf(db.Model):
         
     @property
     def surface_type(self):
-        # Try to extract surface type from features
         if self.features:
             features_list = self.features.lower().split(',')
             for surface in ['grass', 'artificial', 'indoor', 'clay', 'concrete']:
@@ -109,96 +121,6 @@ class Turf(db.Model):
         if not self.features:
             return False
         return feature_name.lower() in [f.strip().lower() for f in self.features.split(',')]
-    
-    # Foreign keys
-    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Relationships
-    images = db.relationship('TurfImage', backref='turf', lazy='dynamic')
-    time_slots = db.relationship('TimeSlot', backref='turf', lazy='dynamic')
-    bookings = db.relationship('Booking', backref='turf', lazy='dynamic')
-    
-    def get_available_slots(self, date):
-        """Get available time slots for a specific date"""
-        slots = TimeSlot.query.filter_by(turf_id=self.id, day_of_week=date.weekday()).all()
-        booked_slots = Booking.query.filter_by(
-            turf_id=self.id,
-            booking_date=date,
-            status=BookingStatus.CONFIRMED
-        ).all()
-        
-        # Create a list of booked time ranges
-        booked_times = []
-        for booking in booked_slots:
-            booked_times.append((booking.start_time, booking.end_time))
-        
-        available_slots = []
-        for slot in slots:
-            # Check if the slot overlaps with any booking
-            is_available = True
-            for booked_start, booked_end in booked_times:
-                if (slot.start_time < booked_end and slot.end_time > booked_start):
-                    is_available = False
-                    break
-            
-            if is_available:
-                available_slots.append(slot)
-        
-        return available_slots
-        
-    def get_average_rating(self):
-        """Calculate the average rating for this turf"""
-        from sqlalchemy import func
-        
-        result = db.session.query(func.avg(Review.rating)).filter_by(turf_id=self.id).scalar()
-        if result is None:
-            return 0
-        return round(float(result), 1)
-        
-    def get_rating_count(self):
-        """Get the total number of ratings for this turf"""
-        return Review.query.filter_by(turf_id=self.id).count()
-        
-    def get_rating_distribution(self):
-        """Get the distribution of ratings (how many 5-star, 4-star, etc.)"""
-        from sqlalchemy import func
-        
-        distribution = {}
-        for i in range(1, 6):
-            count = Review.query.filter_by(turf_id=self.id, rating=i).count()
-            distribution[i] = count
-        return distribution
-        
-    def is_favorited_by(self, user_id):
-        """Check if this turf is favorited by a specific user"""
-        return Favorite.query.filter_by(turf_id=self.id, user_id=user_id).first() is not None
-        
-    def get_share_url(self, domain):
-        """Generate a shareable URL for this turf"""
-        return f"https://{domain}/turfs/{self.id}"
-        
-    def to_dict(self):
-        """Convert turf to dictionary for JSON/API responses"""
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'address': self.address,
-            'city': self.city,
-            'state': self.state,
-            'country': self.country,
-            'base_price_per_hour': self.base_price_per_hour,
-            'indoor': self.indoor,
-            'size': self.size,
-            'features': self.features.split(',') if self.features else [],
-            'avg_rating': self.get_average_rating(),
-            'rating_count': self.get_rating_count(),
-            'has_parking': self.has_parking,
-            'has_changing_room': self.has_changing_room,
-            'has_shower': self.has_shower,
-            'has_floodlights': self.has_floodlights,
-            'surface_type': self.surface_type
-        }
 
 
 class TurfImage(db.Model):
@@ -217,15 +139,6 @@ class TimeSlot(db.Model):
     price_adjustment = db.Column(db.Float, default=0.0)  # +/- percentage adjustment to base price
     turf_id = db.Column(db.Integer, db.ForeignKey('turf.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-
-class BookingStatus:
-    PENDING = 'pending'  # Initial request
-    NEGOTIATING = 'negotiating'  # Price negotiation in progress
-    PAYMENT_PENDING = 'payment_pending'  # Payment needs to be completed
-    CONFIRMED = 'confirmed'  # Booking confirmed
-    CANCELLED = 'cancelled'  # Booking cancelled
-    COMPLETED = 'completed'  # Booking completed
 
 
 class Booking(db.Model):

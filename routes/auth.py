@@ -46,6 +46,12 @@ def register():
     
     form = RegisterForm()
     if form.validate_on_submit():
+        # Check if user already exists
+        if User.query.filter_by(email=form.email.data).first() or User.query.filter_by(username=form.username.data).first():
+            flash('Username or email already exists.', 'danger')
+            return render_template('auth/register.html', form=form, title='Register')
+            
+        # Create new user
         user = User(
             username=form.username.data,
             email=form.email.data,
@@ -69,6 +75,12 @@ def register_owner():
     
     form = RegisterOwnerForm()
     if form.validate_on_submit():
+        # Check if user already exists
+        if User.query.filter_by(email=form.email.data).first() or User.query.filter_by(username=form.username.data).first():
+            flash('Username or email already exists.', 'danger')
+            return render_template('auth/register_owner.html', form=form, title='Register as Owner')
+            
+        # Create new user with OWNER role
         user = User(
             username=form.username.data,
             email=form.email.data,

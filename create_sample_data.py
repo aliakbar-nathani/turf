@@ -1,8 +1,8 @@
 from app import app, db
-from models import User, Turf, TimeSlot, TurfImage, UserRole
-from werkzeug.security import generate_password_hash
+from models import User, UserRole, Turf, TurfImage, TimeSlot, Booking, Review
 from datetime import datetime, time
 import random
+from werkzeug.security import generate_password_hash
 
 def create_sample_data():
     """Create sample users and turfs for testing"""
@@ -45,7 +45,7 @@ def create_sample_data():
         admin.set_password('admin123')
         db.session.add(admin)
         
-        # Commit to get user IDs
+        # Commit users to database
         db.session.commit()
         
         # Create sample turfs for the owner
@@ -73,48 +73,43 @@ def create_sample_data():
                 'country': 'India',
                 'postal_code': '110001',
                 'base_price_per_hour': 1500,
-                'features': 'Air Conditioning,Digital Scoreboard,Pro Lighting,Premium Turf',
+                'features': 'Floodlights,Parking,Changing Rooms,Showers,Equipment,Refreshments',
                 'size': '7-a-side',
                 'indoor': True,
-                'image_url': 'https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'
+                'image_url': 'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1074&q=80'
             },
             {
-                'name': 'Sunset Grounds',
-                'description': 'Beautiful outdoor turf located with a view of the sunset. Natural grass field maintained to professional standards. Includes running track around the perimeter.',
-                'address': '789 Sunset Boulevard',
+                'name': 'Sunset Beach Soccer',
+                'description': 'Unique beach soccer field with natural sand surface. Located right next to the beach, offers a different football experience with stunning sunset views.',
+                'address': '789 Beach Road',
+                'city': 'Goa',
+                'state': 'Goa',
+                'country': 'India',
+                'postal_code': '403001',
+                'base_price_per_hour': 1000,
+                'features': 'Floodlights,Refreshments,Equipment',
+                'size': '5-a-side',
+                'indoor': False,
+                'image_url': 'https://images.unsplash.com/photo-1518604100146-5d424ab3faae?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'
+            },
+            {
+                'name': 'Academy Fields',
+                'description': 'Professional training center with multiple high-quality fields. Used by local professional clubs for training, now available for public bookings.',
+                'address': '101 Academy Street',
                 'city': 'Bangalore',
                 'state': 'Karnataka',
                 'country': 'India',
                 'postal_code': '560001',
-                'base_price_per_hour': 1000,
-                'features': 'Natural Grass,Running Track,Spectator Seating,Equipment Rental',
+                'base_price_per_hour': 1800,
+                'features': 'Floodlights,Parking,Changing Rooms,Showers,Equipment,Refreshments',
                 'size': '11-a-side',
                 'indoor': False,
-                'image_url': 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'
-            },
-            {
-                'name': 'Premier Futsal',
-                'description': 'Specialized futsal court with smooth playing surface. Perfect for fast-paced futsal games with friends or league matches. Includes professional futsal goals and markings.',
-                'address': '101 Futsal Street',
-                'city': 'Chennai',
-                'state': 'Tamil Nadu',
-                'country': 'India',
-                'postal_code': '600001',
-                'base_price_per_hour': 800,
-                'features': 'Futsal Goals,Ball Rental,Coaching Available,Tournaments',
-                'size': 'Futsal',
-                'indoor': True,
-                'image_url': 'https://images.unsplash.com/photo-1542773049-6054c7ce5a06?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1171&q=80'
+                'image_url': 'https://images.unsplash.com/photo-1532087853-cc278694b5db?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80'
             }
         ]
         
-        # Time slot periods
-        morning = [(8, 0), (9, 0), (10, 0), (11, 0)]
-        afternoon = [(12, 0), (13, 0), (14, 0), (15, 0), (16, 0)]
-        evening = [(17, 0), (18, 0), (19, 0), (20, 0)]
-        
-        # Create each turf with time slots
         for turf_info in turf_data:
+            # Create turf
             turf = Turf(
                 name=turf_info['name'],
                 description=turf_info['description'],
@@ -127,10 +122,13 @@ def create_sample_data():
                 features=turf_info['features'],
                 size=turf_info['size'],
                 indoor=turf_info['indoor'],
-                owner_id=owner.id
+                owner_id=owner.id,
+                active=True,
+                auto_approve_bookings=False
             )
+            
             db.session.add(turf)
-            db.session.flush()  # To get the turf ID
+            db.session.flush()  # To get the turf.id
             
             # Add primary image
             image = TurfImage(
@@ -140,50 +138,42 @@ def create_sample_data():
             )
             db.session.add(image)
             
-            # Add time slots for each day of the week
+            # Create time slots for each day of the week
             for day in range(7):  # 0=Monday, 6=Sunday
-                # Add morning slots (standard pricing)
-                for hour, minute in morning:
-                    start = time(hour, minute)
-                    end = time(hour + 1, minute)
-                    slot = TimeSlot(
-                        day_of_week=day,
-                        start_time=start,
-                        end_time=end,
-                        price_adjustment=0,  # Standard price
-                        turf_id=turf.id
-                    )
-                    db.session.add(slot)
+                # Morning slots (cheaper)
+                morning_slot = TimeSlot(
+                    day_of_week=day,
+                    start_time=time(8, 0),
+                    end_time=time(12, 0),
+                    price_adjustment=-10.0,  # 10% cheaper
+                    turf_id=turf.id
+                )
+                db.session.add(morning_slot)
                 
-                # Add afternoon slots (10% discount)
-                for hour, minute in afternoon:
-                    start = time(hour, minute)
-                    end = time(hour + 1, minute)
-                    slot = TimeSlot(
-                        day_of_week=day,
-                        start_time=start,
-                        end_time=end,
-                        price_adjustment=-10,  # 10% discount
-                        turf_id=turf.id
-                    )
-                    db.session.add(slot)
+                # Afternoon slots (standard price)
+                afternoon_slot = TimeSlot(
+                    day_of_week=day,
+                    start_time=time(12, 0),
+                    end_time=time(16, 0),
+                    price_adjustment=0.0,  # standard price
+                    turf_id=turf.id
+                )
+                db.session.add(afternoon_slot)
                 
-                # Add evening slots (20% premium)
-                for hour, minute in evening:
-                    start = time(hour, minute)
-                    end = time(hour + 1, minute)
-                    slot = TimeSlot(
-                        day_of_week=day,
-                        start_time=start,
-                        end_time=end,
-                        price_adjustment=20,  # 20% premium
-                        turf_id=turf.id
-                    )
-                    db.session.add(slot)
+                # Evening slots (more expensive)
+                evening_slot = TimeSlot(
+                    day_of_week=day,
+                    start_time=time(16, 0),
+                    end_time=time(22, 0),
+                    price_adjustment=15.0,  # 15% more expensive
+                    turf_id=turf.id
+                )
+                db.session.add(evening_slot)
         
-        # Commit all changes
+        # Commit all the changes
         db.session.commit()
+        
         print("Sample data created successfully!")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     create_sample_data()
