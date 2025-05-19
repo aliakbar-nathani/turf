@@ -447,9 +447,9 @@ def respond_booking(booking_id):
     db.session.commit()
     return redirect(url_for('owner.bookings'))
 
-@owner.route('/analytics_old')
+@owner.route('/analytics')
 @login_required
-def analytics_old():
+def analytics():
     # Redirect to the new analytics dashboard
     return redirect(url_for('analytics.owner_analytics'))
     

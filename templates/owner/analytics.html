@@ -8,10 +8,16 @@
         transition: transform 0.2s;
         margin-bottom: 1.5rem;
         height: 100%;
+        background-color: #ffffff;
+        border: 1px solid rgba(0,0,0,.125);
     }
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+    }
+    .card-header {
+        background-color: rgba(0,0,0,.03);
+        border-bottom: 1px solid rgba(0,0,0,.125);
     }
     .stat-card {
         border-left: 4px solid #0d6efd;
@@ -65,8 +71,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid my-4">
-    <h1 class="mb-4">Analytics Dashboard</h1>
+<div class="container my-4 bg-white p-4 rounded shadow-sm">
+    <h1 class="mb-4 fw-bold text-primary">Analytics Dashboard</h1>
     
     <!-- Turf Selector -->
     <div class="turf-selector">

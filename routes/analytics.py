@@ -10,7 +10,7 @@ import logging
 # Create Blueprint
 analytics = Blueprint('analytics', __name__)
 
-@analytics.route('/owner/analytics')
+@analytics.route('/analytics')
 @login_required
 def owner_analytics():
     """Main analytics dashboard for turf owners"""
