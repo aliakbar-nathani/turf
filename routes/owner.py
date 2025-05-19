@@ -447,28 +447,11 @@ def respond_booking(booking_id):
     db.session.commit()
     return redirect(url_for('owner.bookings'))
 
-@owner.route('/analytics')
+@owner.route('/analytics_old')
 @login_required
-def analytics():
-    # Get all turfs owned by the current user
-    turfs = Turf.query.filter_by(owner_id=current_user.id).all()
-    
-    # Default to the first turf if none specified
-    selected_turf_id = request.args.get('turf_id', None, type=int)
-    
-    if not turfs:
-        flash('You need to add a turf before viewing analytics.', 'info')
-        return redirect(url_for('owner.turfs'))
-    
-    if selected_turf_id is None and turfs:
-        selected_turf_id = turfs[0].id
-    
-    # Get selected turf
-    selected_turf = next((t for t in turfs if t.id == selected_turf_id), None)
-    
-    if not selected_turf:
-        flash('Selected turf not found.', 'danger')
-        return redirect(url_for('owner.analytics'))
+def analytics_old():
+    # Redirect to the new analytics dashboard
+    return redirect(url_for('analytics.owner_analytics'))
     
     # Time periods for analytics
     current_date = datetime.utcnow().date()

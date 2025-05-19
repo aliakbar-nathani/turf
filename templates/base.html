@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Turf Booking Platform{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-content {
+            flex: 1;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: auto;
+            padding: 1rem 0;
+        }
+        
+        .custom-card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .badge-corner {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0.5rem;
+            border-top-right-radius: 0.25rem;
+        }
+        
+        .turf-feature-icon {
+            color: var(--bs-primary);
+            margin-right: 0.5rem;
+        }
+        
+        .star-rating .bi-star-fill {
+            color: var(--bs-warning);
+        }
+        
+        .sidebar {
+            min-height: calc(100vh - 56px);
+            background-color: var(--bs-dark);
+            border-right: 1px solid var(--bs-border-color);
+        }
+    </style>
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="bi bi-dribbble me-2"></i>TurfBooking
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/search">Find Turfs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/bookings">My Bookings</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.is_owner() %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="ownerDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Owner Menu
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ownerDropdown">
+                                <li><a class="dropdown-item" href="/owner/dashboard">Dashboard</a></li>
+                                <li><a class="dropdown-item" href="/owner/turfs">My Turfs</a></li>
+                                <li><a class="dropdown-item" href="/owner/bookings">Booking Requests</a></li>
+                                <li><a class="dropdown-item" href="/owner/analytics">Analytics</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/owner/settings">Settings</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+                        
+                        {% if current_user.is_admin() %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Admin
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminDropdown">
+                                <li><a class="dropdown-item" href="/admin/dashboard">Admin Dashboard</a></li>
+                                <li><a class="dropdown-item" href="/admin/users">User Management</a></li>
+                                <li><a class="dropdown-item" href="/admin/turfs">Turf Management</a></li>
+                                <li><a class="dropdown-item" href="/admin/disputes">Dispute Management</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/admin/settings">Admin Settings</a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle me-1"></i>{{ current_user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="/user/profile">My Profile</a></li>
+                                <li><a class="dropdown-item" href="/user/favorites">Favorites</a></li>
+                                <li><a class="dropdown-item" href="/notifications">Notifications</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/auth/login">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/auth/register">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer bg-dark text-light">
+        <div class="container">
+            <div class="row py-3">
+                <div class="col-md-6">
+                    <p class="mb-0">&copy; 2025 TurfBooking. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="/privacy" class="text-light me-3">Privacy Policy</a>
+                    <a href="/terms" class="text-light me-3">Terms of Service</a>
+                    <a href="/contact" class="text-light">Contact Us</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Scripts -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
